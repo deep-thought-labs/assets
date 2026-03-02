@@ -12,7 +12,7 @@ Each network (mainnet, testnet) has a `network-data.json` in its folder (`mainne
 | `chain_name` | string | docs | Short name / slug (e.g. `infinite`). Same concept as chainlist `shortName`. |
 | `bech32_prefix` | string | docs | Cosmos Bech32 address prefix (e.g. `infinite`). |
 | `evm_chain_id` | number | NODE_EVM_CHAIN_ID / EIP-155 | EVM chain ID in decimal (e.g. `421018`). |
-| `evm_chain_id_hex` | string | derived | EVM chain ID in hex (e.g. `0x66b4a`). |
+| `evm_chain_id_hex` | string | derived | EVM chain ID in hex; must be the hex representation of `evm_chain_id` (e.g. 421018 → `0x66c9a`). |
 | `evm_chain_name` | string | — | Chain identifier for EVM context (e.g. `INFINITE`). Same concept as chainlist `chain`. |
 | `evm_network_id` | number | — | EVM network ID; for this chain same as `evm_chain_id`. |
 | `info_url` | string | — | Project / info URL (e.g. `https://infinitedrive.xyz`). |

@@ -1,0 +1,73 @@
+{
+  "environment": "testnet",
+  "name": "Infinite Improbability Drive Creative",
+  "chain_id": "infinite_421018002-1",
+  "chain_name": "infinite",
+  "bech32_prefix": "infinite",
+  "evm_chain_id": 421018002,
+  "evm_chain_id_hex": "0x19183992",
+  "evm_chain_name": "INFINITE",
+  "evm_network_id": 421018002,
+  "info_url": "https://infinitedrive.xyz",
+  "icon": "infinite",
+  "native_currency": {
+    "name": "CreativeImprobability",
+    "symbol": "CRE42",
+    "description": "CreativeImprobability Token — Project 42 Creative: Experimental Playground Network",
+    "base": "cdrop",
+    "display": "CreativeImprobability",
+    "denom_units": [
+      {
+        "denom": "cdrop",
+        "exponent": 0,
+        "aliases": []
+      },
+      {
+        "denom": "CreativeImprobability",
+        "exponent": 18,
+        "aliases": [
+          "improbability"
+        ]
+      }
+    ]
+  },
+  "resources": {
+    "genesis": {
+      "path": "/creative/genesis.json",
+      "curl_output_filename": "genesis.json"
+    },
+    "network_data": {
+      "path": "/creative/network-data.json",
+      "curl_output_filename": "network-data.json"
+    }
+  },
+  "endpoints": {
+    "p2p": [
+      { "url": "00000000@server-xenia.infinitedrive.xyz:26676", "primary": true }
+    ],
+    "comet-rpc": [],
+    "grpc": [],
+    "grpc-web": [],
+    "rest": [],
+    "json-rpc-http": [],
+    "json-rpc-ws": []
+  },
+  "faucets": [],
+  "features": [
+    {
+      "name": "EIP155"
+    },
+    {
+      "name": "EIP1559"
+    }
+  ],
+  "explorers": [
+    {
+      "name": "Infinite Drive Creative Explorer",
+      "url": "https://creative-scan.infinitedrive.xyz",
+      "icon": "blockscout",
+      "standard": "EIP3091",
+      "primary": true
+    }
+  ]
+}

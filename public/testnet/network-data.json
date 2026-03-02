@@ -5,7 +5,7 @@
   "chain_name": "infinite",
   "bech32_prefix": "infinite",
   "evm_chain_id": 421018001,
-  "evm_chain_id_hex": "0x191f829",
+  "evm_chain_id_hex": "0x19183991",
   "evm_chain_name": "INFINITE",
   "evm_network_id": 421018001,
   "info_url": "https://infinitedrive.xyz",

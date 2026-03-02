@@ -12,7 +12,8 @@ This is the assets repository of **Project 42**: public data and documentation f
 
 - **`public/`** — Site root:
   - **`index.html`** — Home (networks, widgets).
-  - **`mainnet/`**, **`testnet/`** — Genesis, `network-data.json`, and a detail page. Each **`index.html`** is a short wrapper that loads the shared fragment **`templates/network-page.html`** and passes **`data-network="mainnet"`** or **`data-network="testnet"`** so the script knows what to load. Edit the fragment once; both routes use it. UI copy (title, heading, intro) is in **`js/network-page.js`** (`NETWORK_UI`).
+  - **`mainnet/`**, **`testnet/`**, **`creative/`** — Per-network genesis, `network-data.json`, and a detail page.
+  - **`templates/`** — Shared HTML fragment for network pages (e.g. `network-page.html`); used by mainnet, testnet, and creative.
   - **`widgets/`** — Utilities.
   - **`references/`** — Schema and reference docs.
   - **`css/`**, **`js/`** — Shared styles and scripts.
@@ -35,7 +36,7 @@ Or use the local server that always returns 200 for HTML (avoids Safari blank pa
 node server.js
 ```
 
-Then open `http://localhost:3000/`, `http://localhost:3000/mainnet/`, `http://localhost:3000/testnet/`.
+Then open localhost on the port shown (e.g. `http://localhost:3000`) in your browser.
 
 **Requirement:** [Node.js](https://nodejs.org/) (for `npx` or `node`). If mainnet/testnet fail to load from disk, the page shows an error that suggests this command.
 
@@ -50,6 +51,9 @@ Then open `http://localhost:3000/`, `http://localhost:3000/mainnet/`, `http://lo
 | `/testnet/` | Testnet detail |
 | `/testnet/genesis.json` | Testnet genesis |
 | `/testnet/network-data.json` | Testnet network data |
+| `/creative/` | Creative (temporary / Phoenix testnet) detail |
+| `/creative/genesis.json` | Creative genesis |
+| `/creative/network-data.json` | Creative network data |
 | `/widgets/` | Widgets |
 | `/references/` | Schema and reference docs |
 

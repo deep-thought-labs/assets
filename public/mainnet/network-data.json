@@ -5,7 +5,7 @@
   "chain_name": "infinite",
   "bech32_prefix": "infinite",
   "evm_chain_id": 421018,
-  "evm_chain_id_hex": "0x66b4a",
+  "evm_chain_id_hex": "0x66c9a",
   "evm_chain_name": "INFINITE",
   "evm_network_id": 421018,
   "info_url": "https://infinitedrive.xyz",
@@ -13,7 +13,7 @@
   "native_currency": {
     "name": "Improbability",
     "symbol": "42",
-    "description": "Improbability Token (42) - Fuel for the Infinite Improbability Drive. Each cup is the tea that runs the drive. The drive runs on tea. Properly prepared.",
+    "description": "Improbability Token (42) — Fuel for the Infinite Improbability Drive. Each cup is the tea that runs the drive. The drive runs on tea. Properly prepared.",
     "base": "drop",
     "display": "Improbability",
     "denom_units": [

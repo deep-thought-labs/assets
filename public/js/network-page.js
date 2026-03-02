@@ -11,7 +11,7 @@
 
   var ENDPOINT_ORDER = ['p2p', 'comet-rpc', 'grpc', 'grpc-web', 'rest', 'json-rpc-http', 'json-rpc-ws'];
 
-  /** UI copy for mainnet vs testnet (title, heading, intro). Not in JSON — presentation only. */
+  /** UI copy for mainnet vs testnet vs creative (title, heading, intro). Not in JSON — presentation only. */
   var NETWORK_UI = {
     mainnet: {
       title: 'Mainnet — Project 42',
@@ -22,6 +22,11 @@
       title: 'Testnet — Project 42',
       heading: 'Testnet',
       intro: 'This page provides reference data for the <strong>test network</strong>. Testnet mirrors Mainnet in configuration and is intended for testing: new chain features, upgrades, or products and services should be tried here first. Once validated and stable, they can be replicated or deployed on Mainnet.'
+    },
+    creative: {
+      title: 'Creative — Project 42',
+      heading: 'Creative',
+      intro: 'Creative is a <strong>temporary testnet</strong> for short-lived or disposable networks: time-bound objectives, experiments, or a <strong>Phoenix</strong> strategy where the chain is torn down and recreated on a schedule (e.g. weekly or monthly). Use this page for the current Creative instance; endpoints and genesis may change each time the network is recreated.'
     }
   };
 
@@ -195,7 +200,7 @@
   function run() {
     var pathname = (window.location && window.location.pathname) || '';
     var networkParam = document.body && document.body.getAttribute('data-network');
-    var network = (networkParam === 'mainnet' || networkParam === 'testnet') ? networkParam : (pathname.indexOf('testnet') !== -1 ? 'testnet' : 'mainnet');
+    var network = (networkParam === 'mainnet' || networkParam === 'testnet' || networkParam === 'creative') ? networkParam : (pathname.indexOf('creative') !== -1 ? 'creative' : pathname.indexOf('testnet') !== -1 ? 'testnet' : 'mainnet');
     var ui = NETWORK_UI[network] || NETWORK_UI.mainnet;
 
     document.title = ui.title;

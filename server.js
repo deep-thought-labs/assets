@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Local static server that always returns 200 for HTML documents (no 304).
- * Fixes Safari blank page when navigating back. Usage: node server.js
+ * Fixes Safari blank page when navigating. Usage: node server.js
  * Serves ./public on http://localhost:3000
  */
 
