@@ -2,10 +2,12 @@
  * render-markdown.js — Reusable Markdown viewer for the assets site.
  *
  * Fetches a Markdown file, renders it to HTML (via marked), injects into a container,
- * adds heading IDs for anchor links, and optionally applies a CSS class to tables.
+ * adds heading IDs for anchor links, optionally applies a CSS class to tables, and
+ * adds a "Copy" button to each code block so users can copy the contents.
  *
- * Dependencies: page must load "marked" before this script (e.g. from CDN:
- *   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+ * Dependency: uses "marked" for parsing. If marked is not already on the page,
+ * this script loads it from CDN (jsDelivr) automatically. You only need to include
+ * this one script.
  *
  * Usage (two ways):
  *
@@ -30,6 +32,24 @@
  *    });
  *
  * Returns a Promise that resolves when render is done, or rejects on fetch/parse error.
+ *
+ * Example (real usage in widgets/wallet-connect-spec.html):
+ *
+ *   <div id="spec-loading" class="muted">Loading specification…</div>
+ *   <div id="spec-error" class="muted" style="display: none;" role="alert"></div>
+ *   <main
+ *     id="spec-content"
+ *     class="reference-content spec-content"
+ *     style="display: none;"
+ *     data-markdown-src="WALLET_CONNECT_SPECIFICATION.md"
+ *     data-markdown-loading-id="spec-loading"
+ *     data-markdown-error-id="spec-error"
+ *   ></main>
+ *
+ *   <script src="/js/render-markdown.js"></script>
+ *
+ * The script runs on load, finds the main via data-markdown-src, fetches the .md,
+ * renders it into the main, and toggles the loading/error elements.
  */
 (function (global) {
   'use strict';
@@ -62,6 +82,78 @@
     if (!root || !tableClass) return;
     root.querySelectorAll('table').forEach(function (t) {
       t.classList.add(tableClass);
+    });
+  }
+
+  var CODE_BLOCK_WRAPPER = 'assets-markdown-code-block';
+  var COPY_BTN_CLASS = 'assets-markdown-copy-btn';
+  var COPY_STYLES_ID = 'assets-markdown-copy-styles';
+
+  function ensureCopyCodeStyles() {
+    if (global.document && !document.getElementById(COPY_STYLES_ID)) {
+      var style = document.createElement('style');
+      style.id = COPY_STYLES_ID;
+      style.textContent =
+        '.' + CODE_BLOCK_WRAPPER + ' { position: relative; }' +
+        '.' + CODE_BLOCK_WRAPPER + ' pre { padding-right: 4.5rem; }' +
+        '.' + COPY_BTN_CLASS + ' {' +
+        ' position: absolute; top: 0.5rem; right: 0.5rem;' +
+        ' padding: 0.25rem 0.5rem; font-size: 0.75rem; cursor: pointer;' +
+        ' background: rgba(0, 255, 65, 0.15); color: #00ff41; border: 1px solid #00ff4144;' +
+        ' font-family: inherit;' +
+        '}' +
+        '.' + COPY_BTN_CLASS + ':hover { background: rgba(0, 255, 65, 0.25); }' +
+        '.' + COPY_BTN_CLASS + '.copied { color: #00aa55; }';
+      (document.head || document.documentElement).appendChild(style);
+    }
+  }
+
+  function addCopyButtonsToCodeBlocks(root) {
+    if (!root || !root.querySelectorAll) return;
+    ensureCopyCodeStyles();
+    var pres = root.querySelectorAll('pre');
+    pres.forEach(function (pre) {
+      var codeEl = pre.querySelector('code');
+      var text = (codeEl ? codeEl.textContent : pre.textContent) || '';
+      if (!text.trim()) return;
+      var wrapper = document.createElement('div');
+      wrapper.className = CODE_BLOCK_WRAPPER;
+      pre.parentNode.insertBefore(wrapper, pre);
+      wrapper.appendChild(pre);
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = COPY_BTN_CLASS;
+      btn.textContent = 'Copy';
+      btn.setAttribute('aria-label', 'Copy code');
+      btn.addEventListener('click', function () {
+        var label = btn.textContent;
+        function setCopyResult(success) {
+          btn.textContent = success ? 'Copied!' : 'Copy';
+          if (success) btn.classList.add('copied');
+          setTimeout(function () {
+            btn.textContent = label;
+            btn.classList.remove('copied');
+          }, 2000);
+        }
+        if (global.navigator && global.navigator.clipboard && global.navigator.clipboard.writeText) {
+          global.navigator.clipboard.writeText(text).then(function () { setCopyResult(true); }, function () { setCopyResult(false); });
+        } else {
+          try {
+            var ta = document.createElement('textarea');
+            ta.value = text;
+            ta.setAttribute('readonly', '');
+            ta.style.position = 'absolute';
+            ta.style.left = '-9999px';
+            document.body.appendChild(ta);
+            ta.select();
+            setCopyResult(document.execCommand('copy'));
+            document.body.removeChild(ta);
+          } catch (e) {
+            setCopyResult(false);
+          }
+        }
+      });
+      wrapper.appendChild(btn);
     });
   }
 
@@ -109,6 +201,7 @@
           contentEl.innerHTML = global.marked.parse(md);
           ensureHeadingIds(contentEl);
           applyTableClass(contentEl, tableClass);
+          addCopyButtonsToCodeBlocks(contentEl);
         }
         if (loadingEl) loadingEl.style.display = 'none';
         if (errorEl) errorEl.style.display = 'none';
@@ -143,16 +236,29 @@
     });
   }
 
-  var api = {
-    render: render,
-    autoInit: autoInit
-  };
+  var MARKED_CDN = 'https://cdn.jsdelivr.net/npm/marked/marked.min.js';
 
-  if (global.document && document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', autoInit);
-  } else if (global.document) {
-    autoInit();
+  function whenReady(fn) {
+    if (!global.document) return;
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', fn);
+    } else {
+      fn();
+    }
   }
 
-  global.AssetsMarkdown = api;
+  function runAutoInit() {
+    whenReady(autoInit);
+  }
+
+  if (global.document && typeof global.marked === 'undefined') {
+    var s = document.createElement('script');
+    s.src = MARKED_CDN;
+    s.onload = runAutoInit;
+    (document.head || document.documentElement).appendChild(s);
+  } else {
+    runAutoInit();
+  }
+
+  global.AssetsMarkdown = { render: render, autoInit: autoInit };
 })(typeof window !== 'undefined' ? window : this);
