@@ -55,6 +55,7 @@ Then open localhost on the port shown (e.g. `http://localhost:3000`) in your bro
 | `/creative/genesis.json` | Creative genesis |
 | `/creative/network-data.json` | Creative network data |
 | `/widgets/` | Widgets |
+| `/widgets/wallet-connect-spec.html` | Wallet Connect specification (renders `WALLET_CONNECT_SPECIFICATION.md` in browser; requires HTTP) |
 | `/references/NETWORK_DATA_JSON_SCHEMA.html` | network-data.json schema |
 | `/references/NODE_ENDPOINT_SERVICES.html` | Node endpoint and service types |
 
