@@ -4,6 +4,23 @@
 
 ---
 
+## Estado actual y progreso (última actualización)
+
+**Fase en curso:** Primer prototipo funcional.
+
+| Ítem | Estado | Notas |
+|------|--------|--------|
+| 1. Archivo `wallet-connect.js` | Hecho | Config desde global + data attributes; orden de búsqueda del contenedor: `[data-drive-widget="wallet-connect"]` → id por `data-target-id` → primer `[data-network]`. Base URL = origin del script. Fetch a `{origin}/{network}/network-data.json`. |
+| 2. Mapeo network-data → wallet | Hecho | `evm_chain_id_hex`, `evm_chain_name`, RPC (primario o primero), `native_currency` con decimals desde denom_units (exponent 18 o mayor). Explorers → array de URLs. |
+| 3. Wallet (provider, addChain, requestAccounts, eventos) | Hecho | Provider = `window.ethereum` o `ethereum[0]` si es array. addEthereumChain si la red no es la actual; luego eth_requestAccounts. Suscripción a accountsChanged y chainChanged; chainId normalizado a hex. |
+| 4. Estado y API (`window.DriveWallet`, callbacks) | Hecho | Objeto público actualizado en connect/disconnect/eventos. Callbacks desde `window.DriveWalletWidget`: onReady, onConnect, onDisconnect, onError, onAccountsChanged, onChainChanged. |
+| 5. UI mínima (inline, prefijo `.drive-wc-*`) | Hecho | Estados: cargando, sin wallet, listo (botón Connect), conectado (dirección truncada, red, Desconectar), error. Sin sessionStorage en este prototipo. |
+| 6. Página de prueba | Hecho | `demo.html` en `widgets/wallet-connect/`: incluye el widget con `data-network="mainnet"` y un bloque que muestra `window.DriveWallet` (actualizado cada 2 s y con botón Refresh). |
+
+**Dónde estamos:** El primer prototipo está implementado. Falta probar en entorno real (servir con `npx serve public` o equivalente y abrir `/widgets/wallet-connect/demo.html`) y corregir posibles fallos. A continuación: iteraciones (sessionStorage, temas, refinar spec con decisiones tomadas, etc.).
+
+---
+
 ## 1. Alcance del widget
 
 - **Responsabilidad de este widget:**
@@ -112,8 +129,9 @@ public/
       spec.html                   # Vista en navegador de la especificación
       SPECIFICATION.md            # Especificación técnica completa
       PLAN.md                     # Este plan (uso interno)
-      wallet-connect.js           # (A implementar) Bundle del widget
-      wallet-connect.css          # (Opcional) Estilos; MVP puede ser inline en .js
+      wallet-connect.js           # Bundle del widget (primer prototipo listo)
+      demo.html                   # Página de prueba del widget (conectar, estado, DriveWallet)
+      wallet-connect.css          # (Opcional) Estilos; MVP usa inline en .js
       embed.js                    # (Opcional) Loader que inyecta .js + .css
 ```
 

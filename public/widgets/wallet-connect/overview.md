@@ -25,6 +25,8 @@ Add a container and the script. The widget will render the “Connect” / “Di
 
 That’s enough to get started. You can add more options (theme, callbacks, custom styles) if you need them.
 
+**Try it:** [Demo page](demo.html) (serve the site over HTTP to load network data).
+
 ---
 
 ## More information

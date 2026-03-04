@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wallet Connect — Demo — Project 42</title>
+  <link rel="stylesheet" href="../../css/style.css">
+</head>
+<body>
+  <p class="back"><a href="index.html">← Back to Wallet Connect</a></p>
+  <h1>Wallet Connect — Demo</h1>
+  <p class="subtitle">Project 42 · Infinite Drive Ecosystem</p>
+  <p>Use this page to test the widget. Serve the site over HTTP (e.g. <code>npx serve public</code>) so the script can load <code>network-data.json</code>.</p>
+
+  <section style="margin: 1.5rem 0;">
+    <h2>Widget</h2>
+    <div data-drive-widget="wallet-connect" data-network="mainnet"></div>
+  </section>
+
+  <section style="margin: 1.5rem 0;">
+    <h2>State (window.DriveWallet)</h2>
+    <pre id="state-output" style="font-size: 0.85rem; background: rgba(0,0,0,0.2); padding: 0.75rem; overflow: auto;">{}</pre>
+    <button type="button" id="refresh-state" style="margin-top: 0.5rem;">Refresh</button>
+  </section>
+
+  <script src="wallet-connect.js"></script>
+  <script>
+    function showState() {
+      var el = document.getElementById('state-output');
+      var s = window.DriveWallet;
+      el.textContent = s ? JSON.stringify({ connected: s.connected, address: s.address, chainId: s.chainId, networkName: s.networkName }, null, 2) : '{}';
+    }
+    document.getElementById('refresh-state').addEventListener('click', showState);
+    setInterval(showState, 2000);
+    showState();
+  </script>
+</body>
+</html>
