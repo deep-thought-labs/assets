@@ -100,17 +100,21 @@ Todas las opciones pueden coexistir: el mismo `wallet-connect.js` detecta si hay
 
 ---
 
-## 4. Estructura de archivos propuesta (dentro de `public/`)
+## 4. Estructura de archivos (dentro de `public/`)
 
 ```
 public/
   widgets/
-    index.html              # Ya existe: listado de widgets
+    index.html                    # Listado de widgets
     wallet-connect/
-      wallet-connect.js     # Bundle único del widget (vanilla JS, sin build si se desea)
-      wallet-connect.css    # Estilos aislados (BEM o prefijo .drive-wc-*) para no chocar con el sitio
-      wallet-connect.embed.js  # (Opcional) Loader mínimo que inyecta .js + .css y lee data-*
-    WIDGET_WALLET_CONNECT_PLAN.md  # Este plan
+      index.html                  # Página principal del widget (muestra overview.md)
+      overview.md                 # Resumen corto y cómo usarlo (vista usuario)
+      spec.html                   # Vista en navegador de la especificación
+      SPECIFICATION.md            # Especificación técnica completa
+      PLAN.md                     # Este plan (uso interno)
+      wallet-connect.js           # (A implementar) Bundle del widget
+      wallet-connect.css          # (Opcional) Estilos; MVP puede ser inline en .js
+      embed.js                    # (Opcional) Loader que inyecta .js + .css
 ```
 
 **Rutas públicas (ejemplo con host assets):**
@@ -224,4 +228,104 @@ Con esto se puede implementar un widget estático que proporcione conexión esta
 
 ---
 
-**Documento técnico formal (en inglés):** Para arquitectura, uso, personalización y API de implementadores, ver [WALLET_CONNECT_SPECIFICATION.md](WALLET_CONNECT_SPECIFICATION.md).
+## 9. Reporte de análisis: fortalezas y puntos de mejora
+
+Este apartado resume el análisis realizado sobre la documentación de usuario (overview, índice) y la especificación técnica, desde la perspectiva de **diseño de producto** y de **ingeniería de software**, para ir cerrando huecos y priorizar trabajo.
+
+### 9.1 Perspectiva diseño de producto
+
+**Fortalezas**
+
+- Overview con estructura clara: qué es → qué hace → cómo usarlo → más información.
+- Lenguaje directo y orientado al implementador; un solo ejemplo de código para arrancar.
+- Especificación bien estructurada (TOC, tablas, ejemplos por modo de integración).
+- Separación clara entre alcance (in/out), flujo, configuración, API y estilos.
+
+**Puntos de mejora (a abordar en iteraciones)**
+
+- Añadir en el overview (o en una página dedicada) una **descripción breve o mockup de la UI** (botón Connect, estado conectado con dirección, desconectar) para que producto/diseño puedan validar sin implementar.
+- Dejar explícitos los **requisitos previos** para el implementador: navegador con soporte a `window.ethereum`, sitio en HTTPS si aplica, etc.
+- Incluir una o dos frases sobre **qué pasa cuando algo falla** (sin wallet, usuario rechaza, red incorrecta) y enlace a la spec o a una guía de troubleshooting.
+- Valorar **unificar idioma** en el índice de widgets (descripción vs enlaces) o etiquetar el idioma de cada documento.
+- En la spec, opcional: **mini-glossario** o enlaces para términos (EIP-1193, wallet_addEthereumChain, “connection layer”) para perfiles menos técnicos.
+- Documentar **variables CSS** que el widget usa (lista canónica) para que la personalización vía variables esté completa en la spec.
+
+### 9.2 Perspectiva ingeniería de software
+
+**Lo que está bien definido y permite implementar**
+
+- Flujo de alto nivel, uso de EIP-1193, formas de incrustación, configuración (data attributes + global), forma del estado y callbacks, modos de estilo, seguridad y privacidad, estructura de archivos y campos de `network-data.json` a usar.
+
+**Ambigüedades o huecos a cerrar (para implementación sin reinterpretaciones)**
+
+1. **Resolución del contenedor:** Orden de precedencia y selector concreto cuando coexisten div con `data-network`, `data-target-id` en el script, o `[data-drive-widget="wallet-connect"]`. Definir en la spec el algoritmo (p. ej. primero atributo, luego id, etc.).
+2. **Base URL del script:** Cómo se obtiene (p. ej. `document.currentScript.src` y extracción de origin o path base) para el fetch de `network-data.json` en distintos entornos.
+3. **`native_currency.decimals`:** Regla explícita para derivar `decimals` desde `denom_units` (p. ej. usar el `exponent` del denom_unit con exponent 18, o el mayor exponent).
+4. **Explorers:** Mapeo explícito de `explorers[]` del JSON (objetos con `url`) a `blockExplorerUrls: string[]` para `wallet_addEthereumChain` (p. ej. solo primary o todos).
+5. **Persistencia en `sessionStorage`:** Clave, formato (address, chainId, etc.) y flujo de restauración: qué hacer si al cargar mostramos “conectado” desde sessionStorage pero el usuario ya revocó el sitio en el wallet (re-solicitar cuentas vs mostrar desconectado).
+6. **Múltiples providers (`window.ethereum` como array):** Decisión documentada (v1: usar el primer provider disponible).
+7. **Formato de `chainId`:** Normalizar siempre a hex string en estado y en `chainChanged` para evitar diferencias entre wallets.
+8. **Estados de carga y error en UI:** Mensajes y estados concretos (loading network-data, sin wallet, usuario rechaza, fetch falla, red distinta); si el botón Connect se deshabilita hasta tener datos.
+9. **Precedencia configuración global vs data attributes:** Regla clara (por opción: global gana si está definido, o siempre global).
+10. **Nombres globales:** Fijar en la spec los nombres exactos (`window.DriveWallet`, `window.DriveWalletWidget`) como contrato.
+11. **Apéndice de la spec:** Actualizar estructura de archivos (overview.md, index.html, spec.html, SPECIFICATION.md, PLAN.md) para que coincida con el repo.
+
+**Conclusión del análisis**
+
+- Es posible implementar el widget y que sea funcional; la documentación es clara en lo esencial.
+- Para una implementación única y sin ambigüedades, conviene cerrar los puntos anteriores en la especificación (y en este plan donde aplique) a medida que se avanza con el código.
+
+---
+
+## 10. Roadmap de implementación: qué trabajar ahora
+
+**Flujo acordado**
+
+1. **Primero:** Tener un **primer prototipo estable y en funcionamiento** (widget que se pueda incrustar, conectar, mostrar estado y desconectar).
+2. **Después:** Ir haciendo **iteraciones incrementales** tanto sobre el **código funcional** como sobre las **descripciones y guías** (overview, spec, índices). Cada iteración puede cerrar huecos del análisis (sección 9) o añadir funcionalidad (temas, sessionStorage, copy address, etc.).
+
+**Trabajo inmediato: primer prototipo funcional**
+
+Objetivo: que un desarrollador pueda incluir el script en una página, ver el botón “Conectar a Infinite Drive”, conectar su wallet, ver dirección y red, desconectar, y que otro script pueda leer `window.DriveWallet`.
+
+**Checklist para el primer prototipo (orden sugerido)**
+
+1. **Archivo único `wallet-connect.js`** (en `widgets/wallet-connect/`):
+   - Obtener configuración: `data-network` (default `mainnet`), contenedor: definir y documentar orden de búsqueda (p. ej. `[data-drive-widget="wallet-connect"]` o elemento con id indicado por `data-target-id` en el script, o primer `[data-network]`).
+   - Resolver base URL del script desde `document.currentScript.src` (origin o path base) para construir la URL de `network-data.json`.
+   - `fetch` a `{base}/{network}/network-data.json`; manejar error (mostrar mensaje en UI).
+
+2. **Mapeo de network-data a parámetros de wallet:**
+   - Leer `evm_chain_id_hex`, `evm_chain_name`, `endpoints.json-rpc-http` (primario o primero), `native_currency`: nombre, símbolo, y **decimals** derivados de `denom_units` (regla: usar exponent del denom con exponent 18, o el mayor).
+   - Leer `explorers`: mapear a array de URLs (p. ej. `explorers[].url` o solo el marcado primary).
+   - Construir objeto para `wallet_addEthereumChain`.
+
+3. **Wallet:**
+   - Detectar `window.ethereum` (si es array, usar el primero). Si no hay, mostrar mensaje fijo (“Instala MetaMask o un wallet compatible con EVM”) y no llamar a connect.
+   - Al pulsar conectar: `wallet_addEthereumChain` si hace falta; luego `eth_requestAccounts`. En éxito, guardar address, chainId, networkName; actualizar estado interno y UI.
+   - Suscribirse a `accountsChanged` y `chainChanged`; normalizar `chainId` a hex string; actualizar estado y UI.
+
+4. **Estado y API:**
+   - Objeto interno y objeto público en `window.DriveWallet`: `connected`, `address`, `chainId`, `networkName`, `provider`. Mantenerlo actualizado en connect, disconnect y eventos.
+   - Callbacks opcionales desde `window.DriveWalletWidget` si existe al cargar: `onReady`, `onConnect`, `onDisconnect`, `onError`. Invocarlos en los momentos indicados en la spec.
+
+5. **UI mínima (inline en el mismo JS):**
+   - Un solo modo de estilos por ahora (default con prefijo `.drive-wc-*`).
+   - Estados: (a) Cargando network-data, (b) Sin wallet, (c) Listo para conectar (botón “Conectar a Infinite Drive”), (d) Conectado: texto “Conectado”, dirección truncada, red, botón “Desconectar”, (e) Error (mensaje según fallo).
+   - Desconectar: limpiar estado en memoria y en UI; no tocar sessionStorage en el primer prototipo si se quiere simplificar.
+
+6. **Probar en una página real:**
+   - Página de prueba (p. ej. en `widgets/wallet-connect/` o en `widgets/index.html`) con un div + script que cargue `wallet-connect.js` desde la ruta local/publicada, contra mainnet (o testnet) y verificar connect, estado, disconnect y lectura de `window.DriveWallet`.
+
+**Después del primer prototipo (iteraciones)**
+
+- Añadir persistencia en `sessionStorage` (clave, formato, flujo de restauración) y actualizar spec/plan.
+- Refinar resolución de contenedor y documentarla en la spec.
+- Añadir opciones de tema (`data-theme`) y/o `data-styles="custom"` con solo clases.
+- Mejorar overview y spec con: requisitos previos, mensajes de error, (opcional) descripción o mockup de UI, lista de variables CSS.
+- Añadir botón “Copiar” para la dirección si se desea.
+- Versionado (v1/) y política de no-breaking cuando se estabilice la API.
+
+---
+
+**Documento técnico formal (en inglés):** Para arquitectura, uso, personalización y API de implementadores, ver [SPECIFICATION.md](SPECIFICATION.md) (vista en navegador: [spec.html](spec.html)).

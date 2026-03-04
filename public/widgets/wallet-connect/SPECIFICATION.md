@@ -325,7 +325,3 @@ public/
 - Network data (mainnet): `https://assets.infinitedrive.xyz/mainnet/network-data.json`
 
 The script may derive the base URL from its own `src` so that it works regardless of the exact domain (e.g. staging vs production) as long as network data is served from the same origin.
-
----
-
-*End of specification. For the product and implementation plan in Spanish, see `WIDGET_WALLET_CONNECT_PLAN.md`.*
