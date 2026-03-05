@@ -11,7 +11,7 @@
 | Ítem | Estado | Notas |
 |------|--------|--------|
 | 1. Archivo `wallet-connect.js` | Hecho | Config desde global + data attributes; orden de búsqueda del contenedor: `[data-drive-widget="wallet-connect"]` → id por `data-target-id` → primer `[data-network]`. Base URL = origin del script. Fetch a `{origin}/{network}/network-data.json`. |
-| 2. Mapeo network-data → wallet | Hecho | `evm_chain_id_hex`, `evm_chain_name`, RPC (primario o primero), `native_currency` con decimals desde denom_units (exponent 18 o mayor). Explorers → array de URLs. |
+| 2. Mapeo network-data → wallet | Hecho | `evm_chain_id` (decimal); el widget deriva el hex. `evm_chain_name`, RPC (primario o primero), `native_currency` con decimals desde denom_units (exponent 18 o mayor). Explorers → array de URLs. |
 | 3. Wallet (provider, addChain, requestAccounts, eventos) | Hecho | Provider = `window.ethereum` o `ethereum[0]` si es array. addEthereumChain si la red no es la actual; luego eth_requestAccounts. Suscripción a accountsChanged y chainChanged; chainId normalizado a hex. |
 | 4. Estado y API (`window.DriveWallet`, callbacks) | Hecho | Objeto público actualizado en connect/disconnect/eventos. Callbacks desde `window.DriveWalletWidget`: onReady, onConnect, onDisconnect, onError, onAccountsChanged, onChainChanged. |
 | 5. UI mínima (inline, prefijo `.drive-wc-*`) | Hecho | Estados: cargando, sin wallet, listo (botón Connect), conectado (dirección truncada, red, Desconectar), error. Sin sessionStorage en este prototipo. |
@@ -20,6 +20,8 @@
 | 8. Correcciones post-auditoría | Hecho | Tras la auditoría (ver `AUDIT.md`): (1) Listeners del provider: se guardan referencias y se eliminan en desconectar/reconectar para evitar duplicados. (2) Escape HTML: `escapeAttr()` en dirección y `title` en `renderConnected`. (3) Claridad: lógica de error de `run()` extraída a `handleRunError()`. (4) Comentarios de sección en el código. (5) Comentario en `getConfig()` sobre precedencia global vs data-attributes. Registro detallado en AUDIT.md §3. |
 
 **Dónde estamos:** Primer prototipo con persistencia de sesión. Tras conectar, un refresh de página restaura el estado si el wallet sigue autorizando el sitio. Siguiente iteración: temas (`data-theme`), refinar spec, botón copiar dirección, etc.
+
+**Pendiente (origen de datos):** Actualizar los JSON de las redes (mainnet, testnet, creative) y su documentación para que el origen deje de exponer `evm_chain_id_hex`; el widget usa solo `evm_chain_id` (decimal) y deriva el hex en código.
 
 ---
 

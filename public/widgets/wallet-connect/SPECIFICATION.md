@@ -64,7 +64,7 @@ The widget is the **connection layer**: it does not perform transactions or sign
 2. **Network data:** The widget fetches `/{network}/network-data.json` (e.g. `mainnet`, `testnet`, `creative`) to obtain chain parameters and RPC endpoints. No chain parameters are hardcoded in the widget.
 3. **Wallet detection:** The widget checks for `window.ethereum`. If absent, it shows a clear message (e.g. “Install MetaMask or an EVM-compatible wallet”) and does not attempt connection.
 4. **Connect:** On user action, the widget calls `wallet_addEthereumChain` (if needed) and then `eth_requestAccounts`. On success, it updates internal state and optionally persists to `sessionStorage`.
-5. **State and UI:** The widget keeps internal state (`connected`, `address`, `chainId`, `networkName`, `provider`) and renders the appropriate UI (disconnected vs connected, with address and network and disconnect button). It subscribes to `accountsChanged` and `chainChanged` to keep state and UI in sync.
+5. **State and UI:** The widget keeps internal state (`connected`, `address`, `chainId`, `chainIdHex`, `networkName`, `environment`, `provider`) and renders the appropriate UI (disconnected vs connected, with address and network and disconnect button). It subscribes to `accountsChanged` and `chainChanged` to keep state and UI in sync.
 6. **Exposure:** The same state is exposed on a global object (e.g. `window.DriveWallet`) for other scripts. Callbacks configured by the implementer are invoked on connect, disconnect, account/chain change, and error.
 
 ### 3.2 Component model
@@ -190,10 +190,10 @@ If the script finds `window.DriveWalletWidget` (or the chosen global name) at lo
 | `buttonLabel` | `string` | Same as `data-button-label`. |
 | `targetId` | `string` | Same as `data-target-id`. |
 | `onReady` | `function()` | Called when the widget has loaded and network data is ready. |
-| `onConnect` | `function(state)` | Called when the user has connected; `state` includes `address`, `chainId`, `networkName`. |
+| `onConnect` | `function(state)` | Called when the user has connected; `state` includes `address`, `chainId`, `chainIdHex`, `networkName`, `environment`. |
 | `onDisconnect` | `function()` | Called when the user has disconnected via the widget. |
 | `onAccountsChanged` | `function(accounts: string[])` | Optional. Called when the provider emits `accountsChanged`. |
-| `onChainChanged` | `function(chainId: string)` | Optional. Called when the provider emits `chainChanged`. |
+| `onChainChanged` | `function(chainIdHex: string)` | Optional. Called when the provider emits `chainChanged`; argument is chain ID in hex. |
 | `onError` | `function(message \| Error)` | Called when an error occurs (no wallet, user rejected, fetch failed, etc.). |
 
 ---
@@ -209,17 +209,21 @@ After the widget has loaded, it exposes the current connection state on a global
 ```ts
 interface DriveWalletState {
   connected: boolean;
-  address: string | null;   // EIP-55 or lowercase; null when disconnected
-  chainId: string | null;  // hex string (e.g. "0x66c9a"); null when disconnected
+  address: string | null;       // EIP-55 or lowercase; null when disconnected
+  chainId: number | null;       // decimal (e.g. 421018); null when disconnected or after chainChanged
+  chainIdHex: string | null;    // hex (e.g. "0x66c9a"); derived from evm_chain_id when on that network; from wallet on chainChanged
   networkName: string | null;
-  provider: EIP1193Provider | null;  // same as window.ethereum when connected
+  environment: string | null;   // "mainnet" | "testnet" | "creative" when connected; null when disconnected
+  provider: EIP1193Provider | null; // same as window.ethereum when connected
 }
 ```
 
 - **connected:** `true` if the widget considers the user connected (has address and has not clicked Disconnect).
 - **address:** Current account address, or `null` when disconnected.
-- **chainId:** Current chain ID (hex), or `null` when disconnected.
+- **chainId:** Chain ID in **decimal** (e.g. `421018`). From network-data.json `evm_chain_id` only; `null` when not from our fetched config (e.g. after `chainChanged`).
+- **chainIdHex:** Chain ID in **hex** (e.g. `"0x66c9a"`). Derived in the widget from `evm_chain_id` when connected to that network; from the wallet on `chainChanged` if the user switched chain.
 - **networkName:** Human-readable network name from network data, or `null`.
+- **environment:** From network-data.json `environment` (e.g. `"mainnet"`) when connected to that network; `null` when disconnected or after `chainChanged`.
 - **provider:** The EIP-1193 provider used for the connection; other widgets may use it for `eth_sendTransaction`, `personal_sign`, etc.
 
 Implementers and other widgets must treat this object as read-only. The widget is the single owner of connection state.

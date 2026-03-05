@@ -5,30 +5,103 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Wallet Connect — Demo — Project 42</title>
   <link rel="stylesheet" href="../../css/style.css">
+  <style>
+    .demo-widget-card {
+      margin: 1.5rem 0;
+      padding: 1.5rem;
+      border: 1px solid #00ff4144;
+      border-radius: 8px;
+      background: rgba(0, 255, 65, 0.04);
+      max-width: 32rem;
+    }
+    .demo-widget-card .demo-label {
+      display: block;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #00aa55;
+      margin-bottom: 0.75rem;
+    }
+    .demo-output-box {
+      margin: 1.5rem 0;
+      padding: 0;
+      border: 1px solid #006633;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.35);
+      max-width: 36rem;
+      overflow: hidden;
+    }
+    .demo-output-box .demo-label {
+      display: block;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #00aa55;
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid #00ff4122;
+      background: rgba(0, 0, 0, 0.2);
+    }
+    .demo-output-box pre {
+      margin: 0;
+      padding: 0.75rem 1rem;
+      font-size: 0.85rem;
+      overflow: auto;
+      color: #00dd88;
+      min-height: 4rem;
+    }
+    .demo-output-box .demo-actions {
+      padding: 0.5rem 0.75rem;
+      border-top: 1px solid #00ff4122;
+      background: rgba(0, 0, 0, 0.15);
+    }
+    .demo-output-box .demo-actions button {
+      font-family: inherit;
+      font-size: 0.85rem;
+      padding: 0.35rem 0.75rem;
+      background: rgba(0, 255, 65, 0.15);
+      color: #00ff41;
+      border: 1px solid #00ff4144;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .demo-output-box .demo-actions button:hover {
+      background: rgba(0, 255, 65, 0.25);
+    }
+  </style>
 </head>
 <body>
   <p class="back"><a href="index.html">← Back to Wallet Connect</a></p>
   <h1>Wallet Connect — Demo</h1>
   <p class="subtitle">Project 42 · Infinite Drive Ecosystem</p>
-  <p>Use this page to test the widget. Serve the site over HTTP (e.g. <code>npx serve public</code>) so the script can load <code>network-data.json</code>.</p>
+  <p>Three instances with different themes, sharing the same session: connect in any one and all three update. Serve over HTTP (e.g. <code>npx serve public</code>) so the script can load <code>network-data.json</code>.</p>
 
-  <section style="margin: 1.5rem 0;">
-    <h2>Widget</h2>
-    <div data-drive-widget="wallet-connect" data-network="mainnet"></div>
+  <section class="demo-widget-card">
+    <span class="demo-label">Theme: base</span>
+    <div id="drive-wallet-demo-base" data-theme="base"></div>
+  </section>
+  <section class="demo-widget-card">
+    <span class="demo-label">Theme: light</span>
+    <div id="drive-wallet-demo-light" data-theme="light"></div>
+  </section>
+  <section class="demo-widget-card">
+    <span class="demo-label">Theme: dark</span>
+    <div id="drive-wallet-demo-dark" data-theme="dark"></div>
   </section>
 
-  <section style="margin: 1.5rem 0;">
-    <h2>State (window.DriveWallet)</h2>
-    <pre id="state-output" style="font-size: 0.85rem; background: rgba(0,0,0,0.2); padding: 0.75rem; overflow: auto;">{}</pre>
-    <button type="button" id="refresh-state" style="margin-top: 0.5rem;">Refresh</button>
+  <section class="demo-output-box">
+    <span class="demo-label">Example output — window.DriveWallet</span>
+    <pre id="state-output">{}</pre>
+    <div class="demo-actions">
+      <button type="button" id="refresh-state">Refresh</button>
+    </div>
   </section>
 
-  <script src="wallet-connect.js"></script>
+  <script src="wallet-connect.js" data-target-id="drive-wallet-demo-base,drive-wallet-demo-light,drive-wallet-demo-dark" data-network="mainnet"></script>
   <script>
     function showState() {
       var el = document.getElementById('state-output');
       var s = window.DriveWallet;
-      el.textContent = s ? JSON.stringify({ connected: s.connected, address: s.address, chainId: s.chainId, networkName: s.networkName }, null, 2) : '{}';
+      el.textContent = s ? JSON.stringify({ connected: s.connected, address: s.address, chainId: s.chainId, chainIdHex: s.chainIdHex, networkName: s.networkName, environment: s.environment }, null, 2) : '{}';
     }
     document.getElementById('refresh-state').addEventListener('click', showState);
     setInterval(showState, 2000);
