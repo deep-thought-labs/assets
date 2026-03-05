@@ -43,13 +43,31 @@
   },
   "endpoints": {
     "p2p": [
-      { "url": "00000000@server-xenia.infinitedrive.xyz:26676", "primary": true }
+      { 
+        "url": "a46f2a62c38d87f63b8e6fd50eea7ee828276c11@server-xenia.infinitedrive.xyz:26676", 
+        "primary": true 
+      }
     ],
-    "comet-rpc": [],
-    "grpc": [],
+    "comet-rpc": [
+      {
+        "url": "https://comet-rpc-creative.infinitedrive.xyz", 
+        "primary": true 
+      }
+    ],
+    "grpc": [
+      {
+        "url": "https://grpc-creative.infinitedrive.xyz", 
+        "primary": true 
+      }
+    ],
     "grpc-web": [],
     "rest": [],
-    "json-rpc-http": [],
+    "json-rpc-http": [
+      {
+        "url": "https://evm-rpc-creative.infinitedrive.xyz", 
+        "primary": true 
+      }
+    ],
     "json-rpc-ws": []
   },
   "faucets": [],
