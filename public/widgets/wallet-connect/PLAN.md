@@ -16,8 +16,10 @@
 | 4. Estado y API (`window.DriveWallet`, callbacks) | Hecho | Objeto público actualizado en connect/disconnect/eventos. Callbacks desde `window.DriveWalletWidget`: onReady, onConnect, onDisconnect, onError, onAccountsChanged, onChainChanged. |
 | 5. UI mínima (inline, prefijo `.drive-wc-*`) | Hecho | Estados: cargando, sin wallet, listo (botón Connect), conectado (dirección truncada, red, Desconectar), error. Sin sessionStorage en este prototipo. |
 | 6. Página de prueba | Hecho | `demo.html` en `widgets/wallet-connect/`: incluye el widget con `data-network="mainnet"` y un bloque que muestra `window.DriveWallet` (actualizado cada 2 s y con botón Refresh). |
+| 7. Persistencia sessionStorage + restauración | Hecho | Al conectar se guarda en `sessionStorage` (clave `drive-wallet-session`) la red, dirección, chainId y networkName. Al desconectar o al recibir `accountsChanged` vacío se borra. Al cargar la página, si hay sesión para la misma red se llama `eth_accounts` (sin popup); si el wallet devuelve cuentas se restaura el estado y se muestra "Conectado" sin pedir Connect de nuevo. Si no hay cuentas (usuario revocó en MetaMask) se limpia la sesión y se muestra el botón Connect. |
+| 8. Correcciones post-auditoría | Hecho | Tras la auditoría (ver `AUDIT.md`): (1) Listeners del provider: se guardan referencias y se eliminan en desconectar/reconectar para evitar duplicados. (2) Escape HTML: `escapeAttr()` en dirección y `title` en `renderConnected`. (3) Claridad: lógica de error de `run()` extraída a `handleRunError()`. (4) Comentarios de sección en el código. (5) Comentario en `getConfig()` sobre precedencia global vs data-attributes. Registro detallado en AUDIT.md §3. |
 
-**Dónde estamos:** El primer prototipo está implementado. Falta probar en entorno real (servir con `npx serve public` o equivalente y abrir `/widgets/wallet-connect/demo.html`) y corregir posibles fallos. A continuación: iteraciones (sessionStorage, temas, refinar spec con decisiones tomadas, etc.).
+**Dónde estamos:** Primer prototipo con persistencia de sesión. Tras conectar, un refresh de página restaura el estado si el wallet sigue autorizando el sitio. Siguiente iteración: temas (`data-theme`), refinar spec, botón copiar dirección, etc.
 
 ---
 

@@ -60,6 +60,43 @@ Then open localhost on the port shown (e.g. `http://localhost:3000`) in your bro
 | `/references/NETWORK_DATA_JSON_SCHEMA.html` | network-data.json schema |
 | `/references/NODE_ENDPOINT_SERVICES.html` | Node endpoint and service types |
 
+## CORS (cross-origin)
+
+When the Wallet Connect widget (or any page) is **embedded or run from another origin** (e.g. a local HTML that loads the script from this site, or another domain), the browser treats `fetch()` to this site as cross-origin. The server must send **CORS** headers so the browser allows the response.
+
+- **Local (`node server.js`):** Responses include `Access-Control-Allow-Origin: *`. So a page on another port or origin can load the script and fetch `network-data.json` from this server.
+- **Remote (Cloudflare):** The file **`public/_headers`** configures CORS for static assets. After deploy, JSON and assets under `/mainnet/`, `/testnet/`, `/creative/`, `/widgets/` are served with `Access-Control-Allow-Origin: *`.
+
+### Cómo comprobar si CORS está bien configurado
+
+**1. Con `curl` (reproduces la petición cross-origin):**
+
+```bash
+curl -I -H "Origin: http://localhost:3000" https://TU-DOMINIO/mainnet/network-data.json
+```
+
+(o contra local: `curl -I -H "Origin: http://localhost:9999" http://localhost:3000/mainnet/network-data.json`)
+
+En la respuesta debe aparecer:
+
+```http
+Access-Control-Allow-Origin: *
+```
+
+(o el origen concreto que uses). Si no aparece, el navegador bloqueará el `fetch()` desde ese origen.
+
+**2. En el navegador (DevTools):**
+
+1. Abre una página de **otro origen** que cargue el script de este sitio y haga el `fetch` (o la demo del widget incrustada en otro puerto/origen).
+2. Pestaña **Network**; recarga; localiza la petición a `network-data.json` (o al script).
+3. Haz clic en esa petición → **Headers** → **Response Headers**. Debe figurar `access-control-allow-origin: *` (o el origen correcto).
+
+Si la petición falla en rojo y en la consola ves un error tipo "CORS policy" o "No 'Access-Control-Allow-Origin' header", CORS no está configurado o no aplica a esa ruta.
+
+**Mismo origen (todo en localhost:3000):** Si la página, el script y el `fetch` son todos a `http://localhost:3000`, no hay petición cross-origin y CORS no interviene; el widget funcionará aunque no veas esas cabeceras.
+
+---
+
 ## Deploy
 
 Create a Cloudflare project linked to this repository. No build command is required. **`wrangler.toml`** at the root has the configuration; ensure the **`name`** in it matches the project name in Cloudflare. Deploy with **`npx wrangler deploy`** (or via Cloudflare’s pipeline).

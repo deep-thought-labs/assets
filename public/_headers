@@ -1,0 +1,10 @@
+# CORS: allow cross-origin fetch when the widget is embedded on other origins.
+# (Cloudflare Workers static assets: https://developers.cloudflare.com/workers/static-assets/headers)
+/mainnet/*
+  Access-Control-Allow-Origin: *
+/testnet/*
+  Access-Control-Allow-Origin: *
+/creative/*
+  Access-Control-Allow-Origin: *
+/widgets/*
+  Access-Control-Allow-Origin: *

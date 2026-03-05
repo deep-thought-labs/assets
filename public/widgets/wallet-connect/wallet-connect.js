@@ -8,24 +8,47 @@
   'use strict';
 
   var PREFIX = 'drive-wc-';
+  var STORAGE_KEY = 'drive-wallet-session';
   var NETWORKS = ['mainnet', 'testnet', 'creative'];
   var scriptEl = document.currentScript;
+
+  // --- Session storage
+  function saveSession(network, address, chainId, networkName) {
+    try {
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ network: network, address: address, chainId: chainId, networkName: networkName }));
+    } catch (e) {}
+  }
+
+  function getSession() {
+    try {
+      var raw = sessionStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function clearSession() {
+    try {
+      sessionStorage.removeItem(STORAGE_KEY);
+    } catch (e) {}
+  }
 
   function getScript() {
     return scriptEl;
   }
 
-  function getBaseUrl() {
+  function getNetworkDataUrl(network) {
     var script = getScript();
     if (!script || !script.src) return '';
     try {
-      var url = new URL(script.src);
-      return url.origin;
+      return new URL('../../' + network + '/network-data.json', script.src).href;
     } catch (e) {
       return '';
     }
   }
 
+  // --- Config & container (global config overrides data attributes when present)
   function getConfig() {
     var globalConfig = window.DriveWalletWidget || {};
     var script = getScript();
@@ -64,6 +87,7 @@
     return el || null;
   }
 
+  // --- Network data
   function deriveDecimals(nativeCurrency) {
     if (!nativeCurrency || !nativeCurrency.denom_units || !nativeCurrency.denom_units.length) return 18;
     var units = nativeCurrency.denom_units;
@@ -83,7 +107,7 @@
     var explorers = (data.explorers || []).map(function (e) { return e.url; }).filter(Boolean);
     return {
       chainId: data.evm_chain_id_hex || ('0x' + (data.evm_chain_id || 0).toString(16)),
-      chainName: data.evm_chain_name || data.name || 'Infinite Drive',
+      chainName: data.name || data.evm_chain_name || 'Infinite Drive',
       nativeCurrency: {
         name: nc.name || nc.display || 'Improbability',
         symbol: nc.symbol || '42',
@@ -94,6 +118,7 @@
     };
   }
 
+  // --- Wallet provider & helpers
   function getProvider() {
     var ethereum = window.ethereum;
     if (!ethereum) return null;
@@ -113,12 +138,15 @@
     return addr.slice(0, 6) + '\u2026' + addr.slice(-4);
   }
 
+  // --- State & API
   var state = {
     connected: false,
     address: null,
     chainId: null,
     networkName: null,
-    provider: null
+    provider: null,
+    _accountsHandler: null,
+    _chainHandler: null
   };
 
   function syncDriveWallet() {
@@ -133,6 +161,69 @@
 
   function emit(cb, arg) {
     if (cb) try { cb(arg); } catch (e) { console.error('[DriveWallet] callback error', e); }
+  }
+
+  function removeProviderEvents() {
+    var provider = state.provider;
+    if (!provider) return;
+    if (state._accountsHandler) {
+      provider.removeListener('accountsChanged', state._accountsHandler);
+      state._accountsHandler = null;
+    }
+    if (state._chainHandler) {
+      provider.removeListener('chainChanged', state._chainHandler);
+      state._chainHandler = null;
+    }
+  }
+
+  function setupProviderEvents(container, config, chainParams) {
+    var provider = state.provider;
+    if (!provider) return;
+    removeProviderEvents();
+    state._accountsHandler = function (accounts) {
+      if (!accounts || !accounts.length) {
+        removeProviderEvents();
+        state.connected = false;
+        state.address = null;
+        state.chainId = null;
+        state.networkName = null;
+        state.provider = null;
+        state._accountsHandler = null;
+        state._chainHandler = null;
+        clearSession();
+        syncDriveWallet();
+        renderReady(container, config, chainParams);
+        emit(config.callbacks.onDisconnect);
+      } else {
+        state.address = accounts[0];
+        saveSession(config.network, state.address, state.chainId, state.networkName);
+        syncDriveWallet();
+        renderConnected(container, config, chainParams);
+      }
+      emit(config.callbacks.onAccountsChanged, accounts || []);
+    };
+    state._chainHandler = function (id) {
+      state.chainId = chainIdToHex(id);
+      state.networkName = chainParams.chainName;
+      saveSession(config.network, state.address, state.chainId, state.networkName);
+      syncDriveWallet();
+      renderConnected(container, config, chainParams);
+      emit(config.callbacks.onChainChanged, state.chainId);
+    };
+    provider.on('accountsChanged', state._accountsHandler);
+    provider.on('chainChanged', state._chainHandler);
+  }
+
+  // --- UI
+  function escapeAttr(s) {
+    if (s == null || s === '') return '';
+    var str = String(s);
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
   }
 
   var stylesInjected = false;
@@ -191,11 +282,12 @@
     ensureStyles();
     var addr = truncateAddress(state.address);
     var net = state.networkName || state.chainId || 'Unknown';
+    var titleSafe = escapeAttr(state.address || '');
     var root = document.createElement('div');
     root.className = PREFIX + 'root';
     root.innerHTML =
       '<div class="' + PREFIX + 'connected">' +
-      '<span class="' + PREFIX + 'address" title="' + (state.address || '') + '">' + addr + '</span>' +
+      '<span class="' + PREFIX + 'address" title="' + titleSafe + '">' + escapeAttr(addr) + '</span>' +
       ' <span>(' + net + ')</span>' +
       '<a class="' + PREFIX + 'disconnect" href="#" role="button">Disconnect</a>' +
       '</div>';
@@ -228,32 +320,11 @@
           state.chainId = chainIdHex;
           state.networkName = chainParams.chainName;
           state.provider = provider;
+          saveSession(config.network, state.address, state.chainId, state.networkName);
           syncDriveWallet();
           renderConnected(container, config, chainParams);
+          setupProviderEvents(container, config, chainParams);
           emit(config.callbacks.onConnect, { address: state.address, chainId: state.chainId, networkName: state.networkName });
-
-          provider.on('accountsChanged', function (accounts) {
-            if (!accounts || !accounts.length) {
-              state.connected = false;
-              state.address = null;
-              syncDriveWallet();
-              renderReady(container, config, chainParams);
-              emit(config.callbacks.onDisconnect);
-            } else {
-              state.address = accounts[0];
-              syncDriveWallet();
-              renderConnected(container, config, chainParams);
-            }
-            emit(config.callbacks.onAccountsChanged, accounts || []);
-          });
-
-          provider.on('chainChanged', function (id) {
-            state.chainId = chainIdToHex(id);
-            state.networkName = chainParams.chainName;
-            syncDriveWallet();
-            renderConnected(container, config, chainParams);
-            emit(config.callbacks.onChainChanged, state.chainId);
-          });
         })
         .catch(function (err) {
           renderReady(container, config, chainParams);
@@ -283,39 +354,52 @@
   }
 
   function doDisconnect(container, config, chainParams) {
+    removeProviderEvents();
     state.connected = false;
     state.address = null;
     state.chainId = null;
     state.networkName = null;
     state.provider = null;
+    state._accountsHandler = null;
+    state._chainHandler = null;
+    clearSession();
     syncDriveWallet();
     renderReady(container, config, chainParams);
     emit(config.callbacks.onDisconnect);
   }
 
+  // --- Run
   function run() {
     var config = getConfig();
     if (!config.container) return;
 
     syncDriveWallet();
 
-    var base = getBaseUrl();
-    if (!base) {
-      renderError(config.container, config, 'Could not resolve script base URL.');
-      emit(config.callbacks.onError, new Error('Base URL'));
+    var networkPath = getNetworkDataUrl(config.network);
+    if (!networkPath) {
+      renderError(config.container, config, 'Could not resolve network data URL.');
+      emit(config.callbacks.onError, new Error('Network data URL'));
       return;
     }
-
-    var networkPath = base + '/' + config.network + '/network-data.json';
+    var provider = getProvider();
 
     renderLoading(config.container, config);
 
-    fetch(networkPath)
-      .then(function (r) {
-        if (!r.ok) throw new Error(r.status + ' ' + r.statusText);
-        return r.json();
-      })
-      .then(function (data) {
+    var fetchPromise = fetch(networkPath).then(function (r) {
+      if (!r.ok) throw new Error(r.status + ' ' + r.statusText);
+      return r.json();
+    });
+
+    var session = getSession();
+    var wantRestore = session && session.network === config.network && provider;
+    var accountsPromise = wantRestore ? provider.request({ method: 'eth_accounts' }) : Promise.resolve([]);
+    var chainIdPromise = wantRestore ? provider.request({ method: 'eth_chainId' }) : Promise.resolve(null);
+
+    Promise.all([fetchPromise, accountsPromise, chainIdPromise])
+      .then(function (results) {
+        var data = results[0];
+        var accounts = results[1];
+        var currentChainId = results[2];
         var chainParams = buildAddChainParams(data);
         if (!chainParams) {
           renderError(config.container, config, 'Invalid network data.');
@@ -324,17 +408,52 @@
         }
         emit(config.callbacks.onReady);
 
-        var provider = getProvider();
         if (!provider) {
           renderNoWallet(config.container, config);
           return;
         }
-        renderReady(config.container, config, chainParams);
+
+        if (wantRestore && accounts && accounts.length > 0 && currentChainId != null) {
+          state.connected = true;
+          state.address = accounts[0];
+          state.chainId = chainIdToHex(currentChainId);
+          state.networkName = session.networkName || chainParams.chainName;
+          state.provider = provider;
+          syncDriveWallet();
+          renderConnected(config.container, config, chainParams);
+          setupProviderEvents(config.container, config, chainParams);
+        } else {
+          if (session && session.network === config.network) clearSession();
+          renderReady(config.container, config, chainParams);
+        }
       })
       .catch(function (err) {
-        renderError(config.container, config, 'Failed to load network: ' + (err.message || String(err)));
-        emit(config.callbacks.onError, err);
+        handleRunError(err, networkPath, config, provider);
       });
+  }
+
+  function handleRunError(err, networkPath, config, provider) {
+    clearSession();
+    var isFetchError = err.message && (err.message.indexOf('status') !== -1 || err.message.indexOf('Failed') !== -1);
+    if (isFetchError) {
+      renderError(config.container, config, 'Failed to load network: ' + (err.message || String(err)));
+    } else {
+      fetch(networkPath)
+        .then(function (r) {
+          if (!r.ok) return Promise.reject(new Error(r.status));
+          return r.json();
+        })
+        .then(function (data) {
+          var chainParams = buildAddChainParams(data);
+          if (chainParams && provider) renderReady(config.container, config, chainParams);
+          else if (!provider) renderNoWallet(config.container, config);
+          else renderError(config.container, config, 'Invalid network data.');
+        })
+        .catch(function () {
+          renderError(config.container, config, 'Failed to load network.');
+        });
+    }
+    emit(config.callbacks.onError, err);
   }
 
   if (document.readyState === 'loading') {

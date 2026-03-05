@@ -40,6 +40,14 @@ function isHtmlResponse(filePath) {
 }
 
 const server = http.createServer((req, res) => {
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD');
+    res.setHeader('Access-Control-Max-Age', '86400');
+    res.statusCode = 204;
+    res.end();
+    return;
+  }
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.statusCode = 405;
     res.end();
@@ -55,6 +63,7 @@ const server = http.createServer((req, res) => {
     const ext = path.extname(file);
     const mime = MIME[ext] || 'application/octet-stream';
     res.setHeader('Content-Type', mime);
+    res.setHeader('Access-Control-Allow-Origin', '*');
     if (isHtmlResponse(file)) {
       res.setHeader('Cache-Control', 'no-store');
       res.statusCode = 200;
