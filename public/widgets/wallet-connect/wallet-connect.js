@@ -822,7 +822,14 @@
       '.' + PREFIX + 'root[data-theme="dark"] .' + PREFIX + 'refresh:hover{ color: #f3f4f6; }' +
       '.' + PREFIX + 'root[data-theme="dark"] .' + PREFIX + 'disconnect{ color: #9ca3af; }' +
       '.' + PREFIX + 'root[data-theme="dark"] .' + PREFIX + 'disconnect:hover{ color: #f3f4f6; }' +
-      '.' + PREFIX + 'root[data-theme="dark"] .' + PREFIX + 'message[style*="color:#c00"]{ color: #f87171 !important; }';
+      '.' + PREFIX + 'root[data-theme="dark"] .' + PREFIX + 'message[style*="color:#c00"]{ color: #f87171 !important; }' +
+      '/* dropdown */' +
+      '.' + PREFIX + 'dropdown-wrap{ position: relative; display: inline-block; }' +
+      '.' + PREFIX + 'trigger-wrap{ display: inline-block; }' +
+      '.' + PREFIX + 'panel{ position: fixed; min-width: 280px; max-width: 360px; box-sizing: border-box; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.15); border: 1px solid rgba(0,0,0,0.08); padding: 0; z-index: 9999; background: #fff; }' +
+      '.' + PREFIX + 'panel[data-theme="dark"]{ background: #1f2937; border-color: rgba(255,255,255,0.1); box-shadow: 0 4px 24px rgba(0,0,0,0.4); }' +
+      '.' + PREFIX + 'panel[data-theme="base"] .' + PREFIX + 'root{ background: #fff; }' +
+      '.' + PREFIX + 'panel .' + PREFIX + 'root{ border-radius: 12px; padding: 0.75rem 1rem; }';
     (document.head || document.documentElement).appendChild(style);
   }
 
@@ -1017,7 +1024,12 @@
       btn.setAttribute('aria-label', uiConfig.buttonLabel || 'Connect wallet');
       btn.textContent = isConnecting ? 'Connecting\u2026' : uiConfig.buttonLabel;
       btn.disabled = !!isConnecting;
-      if (typeof onTriggerClick === 'function') btn.addEventListener('click', onTriggerClick);
+      if (typeof onTriggerClick === 'function') {
+        btn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          onTriggerClick();
+        });
+      }
       root.appendChild(btn);
     } else {
       var pill = document.createElement('button');
@@ -1026,7 +1038,12 @@
       pill.setAttribute('role', 'button');
       pill.setAttribute('aria-label', 'Wallet connected: ' + truncateAddress(stateSnapshot.address));
       pill.textContent = truncateAddress(stateSnapshot.address) + ' \u2022 ' + shortNetworkLabel(uiConfig.network, stateSnapshot.networkName);
-      if (typeof onTriggerClick === 'function') pill.addEventListener('click', onTriggerClick);
+      if (typeof onTriggerClick === 'function') {
+        pill.addEventListener('click', function (e) {
+          e.stopPropagation();
+          onTriggerClick();
+        });
+      }
       root.appendChild(pill);
     }
     container.innerHTML = '';
@@ -1057,26 +1074,57 @@
       }
     }
 
+    var triggerElRef = { current: null };
+    var panelElRef = { current: null };
+
     function onDisconnectClick() {
       try {
         core.disconnect(coreConfig);
       } catch (err) {
         if (console && console.warn) console.warn('[DriveWallet] disconnect error', err);
       }
+      if (config.layout === 'dropdown') closePanel();
     }
 
     function renderAll(stateSnapshot) {
       forEachContainer(config, function (el, uiConfig) {
-        renderPanelContent(
-          el,
-          stateSnapshot,
-          uiConfig,
-          chainParamsRef.current,
-          connectWrapper,
-          onDisconnectClick,
-          doRefreshBalances,
-          isConnectingRef.current
-        );
+        if (uiConfig.layout === 'dropdown') {
+          el.innerHTML = '';
+          var wrap = document.createElement('div');
+          wrap.className = PREFIX + 'dropdown-wrap';
+          wrap.style.position = 'relative';
+          wrap.style.display = 'inline-block';
+          el.appendChild(wrap);
+          var triggerContainer = document.createElement('div');
+          triggerContainer.className = PREFIX + 'trigger-wrap';
+          wrap.appendChild(triggerContainer);
+          triggerElRef.current = triggerContainer;
+          renderTriggerInline(triggerContainer, stateSnapshot, uiConfig, chainParamsRef.current, isConnectingRef.current, togglePanel);
+          if (panelOpenRef.current) {
+            var triggerRect = triggerContainer.getBoundingClientRect();
+            var panelContainer = document.createElement('div');
+            panelContainer.className = PREFIX + 'panel';
+            setTheme(panelContainer, uiConfig.theme);
+            panelContainer.style.zIndex = '9999';
+            panelContainer.style.position = 'fixed';
+            panelContainer.style.left = triggerRect.left + 'px';
+            panelContainer.style.top = (triggerRect.bottom + 4) + 'px';
+            wrap.appendChild(panelContainer);
+            panelElRef.current = panelContainer;
+            renderPanelContent(panelContainer, stateSnapshot, uiConfig, chainParamsRef.current, connectWrapper, onDisconnectClick, doRefreshBalances, isConnectingRef.current);
+            var panelRect = panelContainer.getBoundingClientRect();
+            var winH = typeof window !== 'undefined' ? window.innerHeight : 600;
+            if (panelRect.bottom > winH - 8 && triggerRect.top >= panelRect.height + 8) {
+              panelContainer.style.top = (triggerRect.top - panelRect.height - 4) + 'px';
+            }
+          } else {
+            panelElRef.current = null;
+          }
+        } else {
+          triggerElRef.current = null;
+          panelElRef.current = null;
+          renderPanelContent(el, stateSnapshot, uiConfig, chainParamsRef.current, connectWrapper, onDisconnectClick, doRefreshBalances, isConnectingRef.current);
+        }
       });
     }
 
@@ -1117,6 +1165,22 @@
       window.DriveWalletWidget.closePanel = closePanel;
       window.DriveWalletWidget.togglePanel = togglePanel;
     } catch (e) {}
+
+    if (config.layout === 'dropdown') {
+      document.addEventListener('click', function dropdownClickOut(e) {
+        if (!panelOpenRef.current) return;
+        var t = e.target;
+        if (triggerElRef.current && triggerElRef.current.contains(t)) return;
+        if (panelElRef.current && panelElRef.current.contains(t)) return;
+        closePanel();
+      });
+      document.addEventListener('keydown', function dropdownEscape(e) {
+        if (e.key === 'Escape' && panelOpenRef.current) {
+          e.preventDefault();
+          closePanel();
+        }
+      });
+    }
 
     core.init({
       onStateChange: function (stateSnapshot) {

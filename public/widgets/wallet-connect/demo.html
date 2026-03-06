@@ -181,6 +181,13 @@
       </select>
     </label>
     <label>
+      Layout:
+      <select id="opt-layout">
+        <option value="inline">inline</option>
+        <option value="dropdown">dropdown</option>
+      </select>
+    </label>
+    <label>
       Texto del botón (opcional):
       <input type="text" id="opt-button-label" placeholder="Conectar a Infinite Drive">
     </label>
@@ -210,10 +217,12 @@
       var params = new URLSearchParams(location.search);
       var theme = params.get('theme') || 'base';
       var network = params.get('network') || 'mainnet';
+      var layout = params.get('layout') || 'inline';
       var buttonLabel = params.get('buttonLabel') || '';
 
       var container = document.getElementById('drive-wallet-widget');
       container.setAttribute('data-theme', theme);
+      container.setAttribute('data-layout', layout);
       if (buttonLabel) container.setAttribute('data-button-label', buttonLabel);
 
       function escapeAttr(s) {
@@ -221,7 +230,7 @@
       }
       function buildCode() {
         var scriptUrl = 'https://assets.infinitedrive.xyz/widgets/wallet-connect/wallet-connect.js';
-        var divAttrs = 'id="drive-wallet-widget" data-theme="' + escapeAttr(theme) + '"';
+        var divAttrs = 'id="drive-wallet-widget" data-theme="' + escapeAttr(theme) + '" data-layout="' + escapeAttr(layout) + '"';
         if (buttonLabel) divAttrs += ' data-button-label="' + escapeAttr(buttonLabel) + '"';
         return '<div ' + divAttrs + '></div>\n<script src="' + scriptUrl + '" data-network="' + escapeAttr(network) + '" data-target-id="drive-wallet-widget" async><\/script>';
       }
@@ -232,6 +241,7 @@
 
       document.getElementById('opt-theme').value = theme;
       document.getElementById('opt-network').value = network;
+      document.getElementById('opt-layout').value = layout;
       document.getElementById('opt-button-label').value = buttonLabel;
       renderCodeBlock();
 
@@ -239,6 +249,7 @@
         var url = new URL(location.href);
         url.searchParams.set('theme', document.getElementById('opt-theme').value);
         url.searchParams.set('network', document.getElementById('opt-network').value);
+        url.searchParams.set('layout', document.getElementById('opt-layout').value);
         var bl = document.getElementById('opt-button-label').value.trim();
         if (bl) url.searchParams.set('buttonLabel', bl);
         else url.searchParams.delete('buttonLabel');
@@ -261,6 +272,7 @@
       script.src = 'wallet-connect.js';
       script.setAttribute('data-target-id', 'drive-wallet-widget');
       script.setAttribute('data-network', network);
+      script.setAttribute('data-layout', layout);
       script.async = true;
       document.body.appendChild(script);
     })();
