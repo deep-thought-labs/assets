@@ -261,7 +261,7 @@ La Fase Core puede hacerse **antes** de la Fase 0 (así la UI se construye sobre
 - [ ] **Fase Core:** Referencia documentada (Uniswap + EIPs + MetaMask); auditoría ítem a ítem; connect, disconnect, switch/add chain, refresh, sesión y provider alineados con la referencia (no conservar nuestra implementación donde la referencia ya lo hace bien).
 - [ ] Fase 0: Connecting, a11y, refactor TriggerView/PanelView, docs internas.
 - [ ] Fase 1: panelOpen, openPanel/closePanel/togglePanel, config layout.
-- [ ] Fase 2: DOM dropdown, posicionamiento, click-outside, Escape, cerrar al disconnect.
-- [ ] Fase 3: onPanelOpen/onPanelClose, SPEC y ARCHITECTURE actualizados, demo dropdown, clases CSS documentadas.
+- [x] Fase 2: DOM dropdown, posicionamiento, click-outside, Escape, cerrar al disconnect.
+- [x] Fase 3: onPanelOpen/onPanelClose, SPEC y ARCHITECTURE actualizados, demo dropdown, clases CSS documentadas.
 - [ ] Todas las integraciones existentes con `data-layout` por defecto (inline) siguen funcionando igual.
 - [ ] `window.DriveWallet` y `window.DriveWalletWidget` (campos ya existentes) siguen siendo compatibles.

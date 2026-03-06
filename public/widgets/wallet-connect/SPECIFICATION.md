@@ -176,6 +176,7 @@ Configuration is split by **where** it is set: **script tag = data/logic** (netw
 | `data-theme` | container | `base` \| `light` \| `dark` \| (impl-defined) | `base` | Visual theme when using default styles. |
 | `data-button-label` | container | string | (e.g. “Connect to Infinite Drive”) | Label for the primary connect button. |
 | `data-styles` | container | `default` \| `custom` \| `none` | `default` | Styling mode. See [Section 8](#8-styling-and-customization). |
+| `data-layout` | script or container | `inline` \| `dropdown` | `inline` | Layout: `inline` = single block; `dropdown` = trigger + floating panel. |
 | `data-drive-widget` | container | `wallet-connect` | — | Identifies the element as the wallet-connect container. |
 
 ### 6.2 Global configuration object
@@ -189,12 +190,15 @@ If the script finds `window.DriveWalletWidget` (or the chosen global name) at lo
 | `styles` | `string` | Same as `data-styles` (container). |
 | `buttonLabel` | `string` | Same as `data-button-label` (container). |
 | `targetId` | `string` | Same as `data-target-id` (script). |
+| `layout` | `string` | Same as `data-layout`: `inline` \| `dropdown`. |
 | `onReady` | `function()` | Called when the widget has loaded and network data is ready. |
 | `onConnect` | `function(state)` | Called when the user has connected; `state` includes `address`, `chainId`, `chainIdHex`, `networkName`, `environment`. |
 | `onDisconnect` | `function()` | Called when the user has disconnected via the widget. |
 | `onAccountsChanged` | `function(accounts: string[])` | Optional. Called when the provider emits `accountsChanged`. |
 | `onChainChanged` | `function(chainIdHex: string)` | Optional. Called when the provider emits `chainChanged`; argument is chain ID in hex. |
 | `onError` | `function(message \| Error)` | Called when an error occurs (no wallet, user rejected, fetch failed, etc.). |
+| `onPanelOpen` | `function()` | Optional. Called when the panel is opened (dropdown layout only; also when opening via `openPanel()`). |
+| `onPanelClose` | `function()` | Optional. Called when the panel is closed (dropdown layout; includes close via click-outside, Escape, or disconnect). |
 
 ---
 
@@ -239,9 +243,19 @@ The widget adds a function to the global configuration object so that implemente
 
 The connected-state UI includes a **Refresh** link that performs the same refresh. Both the button and a programmatic call use the same internal logic.
 
-### 7.3 Callbacks
+### 7.3 Panel API (dropdown layout)
 
-Callbacks are set via the global configuration object ([Section 6.2](#62-global-configuration-object)). The widget invokes them at the specified lifecycle events. Signatures are as above; the widget does not guarantee a particular `this` binding.
+When the widget is configured with `layout: 'dropdown'`, the global configuration object is extended with functions to control the floating panel:
+
+- **`window.DriveWalletWidget.openPanel`** — Opens the panel (no-op if already open). Invokes `onPanelOpen` callback when the panel becomes open.
+- **`window.DriveWalletWidget.closePanel`** — Closes the panel (no-op if already closed). Invokes `onPanelClose` callback when the panel becomes closed.
+- **`window.DriveWalletWidget.togglePanel`** — Toggles the panel open/closed; callbacks are invoked as above.
+
+The panel closes automatically when the user clicks outside the trigger and panel, presses Escape, or disconnects. In inline layout these functions are still present but have no visible effect (there is no separate panel).
+
+### 7.4 Callbacks
+
+Callbacks are set via the global configuration object ([Section 6.2](#62-global-configuration-object)). The widget invokes them at the specified lifecycle events. Signatures are as above; the widget does not guarantee a particular `this` binding. Exceptions thrown inside callbacks are caught and logged; they do not break widget behavior.
 
 ---
 
@@ -293,6 +307,13 @@ Suggested classes (non-exhaustive):
 | `.drive-wc-disconnect` | Disconnect control. |
 | `.drive-wc-message` | Status or error message. |
 | `.drive-wc-loading` | Loading state indicator. |
+| `.drive-wc-trigger` | In dropdown layout: the clickable trigger (button or connected pill) that opens the panel. |
+| `.drive-wc-trigger-wrap` | Wrapper element around the trigger in dropdown layout. |
+| `.drive-wc-panel` | In dropdown layout: the floating panel that contains connect/disconnect UI. |
+| `.drive-wc-dropdown-wrap` | In dropdown layout: wrapper that contains both trigger and panel. |
+| `.drive-wc-connected` | Pill or block showing connected state (address + network). |
+| `.drive-wc-tokens` | Container for token balance rows. |
+| `.drive-wc-token-row` | Single row for native or ERC-20 balance. |
 
 ---
 

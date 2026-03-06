@@ -43,6 +43,8 @@ Optional callbacks set by the implementer before loading the script:
 | `onError`         | An error occurred; argument: error. |
 | `onAccountsChanged` | Wallet reported account change; argument: `accounts` array. |
 | `onChainChanged`  | Wallet reported chain change; argument: `chainId` (hex). |
+| `onPanelOpen`     | Panel opened (dropdown layout; also when opening via `openPanel()`). |
+| `onPanelClose`    | Panel closed (dropdown; includes click-outside, Escape, or after disconnect). |
 
 **Guarantee:** The **names, invocation timing, and argument shapes** of these callbacks will not change in a breaking way. New optional callbacks may be added.
 
@@ -64,16 +66,26 @@ if (window.DriveWalletWidget && typeof window.DriveWalletWidget.refreshBalances 
 
 A **Refresh** button is shown in the connected-state UI that calls this same logic. The function is safe to call when disconnected (it no-ops if there is no connected address).
 
-### 2.4 Configuration (data attributes and global)
+### 2.4 Panel API (dropdown layout)
+
+When `layout` is `dropdown`, the widget exposes on `window.DriveWalletWidget`:
+
+- **`openPanel()`** — Opens the floating panel; invokes `onPanelOpen` when it becomes open.
+- **`closePanel()`** — Closes the panel; invokes `onPanelClose` when it becomes closed.
+- **`togglePanel()`** — Toggles open/closed; callbacks fire as above.
+
+The panel closes on click-outside, Escape, or after disconnect. In `inline` layout these functions exist but have no visible effect.
+
+### 2.5 Configuration (data attributes and global)
 
 Implementers configure the widget via:
 
-- **Global:** `window.DriveWalletWidget = { network?, targetId?, theme?, buttonLabel?, ...callbacks }` (overrides when present). The widget may add `refreshBalances` to this object after load.
-- **Script tag (data / logic):** `data-network`, `data-target-id`, `data-token-contracts` (comma-separated contract addresses) — which network, where to mount, and which ERC-20 tokens to show balances for.
-- **Container / div (UI only):** `data-theme`, `data-button-label` — appearance and copy
+- **Global:** `window.DriveWalletWidget = { network?, targetId?, theme?, buttonLabel?, layout?, ...callbacks }` (overrides when present). The widget may add `refreshBalances`, `openPanel`, `closePanel`, `togglePanel` to this object after load.
+- **Script tag (data / logic):** `data-network`, `data-target-id`, `data-layout`, `data-token-contracts` — network, mount target, layout (`inline` \| `dropdown`), and token contracts.
+- **Container / div (UI only):** `data-theme`, `data-button-label`, `data-layout` — appearance, copy, and layout (container can override).
 - **Global:** `tokenContracts` (array of addresses). Future: `tokenContractsUrl` (API URL returning JSON array of contract addresses).
 
-**Guarantee:** Existing option names and semantics (e.g. `network`, `targetId`, `theme`, `buttonLabel`) remain stable. New options may be added (e.g. new themes) without breaking current ones.
+**Guarantee:** Existing option names and semantics (e.g. `network`, `targetId`, `theme`, `buttonLabel`, `layout`) remain stable. New options may be added (e.g. new themes) without breaking current ones.
 
 ---
 
@@ -107,15 +119,15 @@ The widget is structured in three **internal** layers. Only the contract above i
 **TriggerView and PanelView (internal structure):** The UI layer is organised around two conceptual views, used by the Bridge depending on layout:
 
 - **TriggerView** (`renderTriggerInline`): The compact control the user clicks — a “Connect” button when disconnected (or “Connecting…” when in progress), or a pill (address + network) when connected. In **inline** layout this is not rendered as a separate node; the same container shows the full content (button or connected bar).
-- **PanelView** (`renderPanelContent`): The content shown in the widget — either “Connecting…”, the Connect button (ready), or the connected bar (address, network, Refresh, Disconnect, token balances). In **inline** layout this is the only view rendered; trigger and panel are effectively one block. In **dropdown** layout (future), the trigger is rendered separately and the panel is shown in a floating dropdown when open.
+- **PanelView** (`renderPanelContent`): The content shown in the widget — either “Connecting…”, the Connect button (ready), or the connected bar (address, network, Refresh, Disconnect, token balances). In **inline** layout this is the only view rendered; trigger and panel are effectively one block. In **dropdown** layout the trigger is rendered separately and the panel is shown in a floating dropdown when open (classes: `.drive-wc-panel`, `.drive-wc-dropdown-wrap`).
 
-In **inline** mode, the Bridge calls `renderPanelContent` only (which branches to `renderConnecting`, `renderReady`, or `renderConnected`). In dropdown mode, the Bridge would render the trigger and, when open, the panel content. See PLAN_EVOLUCION_WIDGET.md.
+In **inline** mode, the Bridge calls `renderPanelContent` only (which branches to `renderConnecting`, `renderReady`, or `renderConnected`). In **dropdown** mode, the Bridge renders the trigger and, when open, the panel; it manages panel state, click-outside and Escape, and `onPanelOpen` / `onPanelClose`. See PLAN_EVOLUCION_WIDGET.md.
 
 ### 3.3 Bridge (orchestration)
 
 **Responsibility:** Glue between Core and UI; DOM discovery and config parsing.
 
-- Reads **config** from script/container/global (network, targetId, containers, theme, buttonLabel, callbacks).
+- Reads **config** from script/container/global (network, targetId, containers, theme, buttonLabel, layout, callbacks).
 - Calls **Core** `start()`, `connect()`, `disconnect()`; registers **onStateChange(state)** and re-renders all containers using the **UI** layer.
 - Handles errors and retry (e.g. second fetch) and decides which UI view to show (error, ready, no wallet).
 - **forEachContainer:** Applies the correct theme per container and calls the right render function.

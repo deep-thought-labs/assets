@@ -142,7 +142,9 @@
         onDisconnect: typeof globalConfig.onDisconnect === 'function' ? globalConfig.onDisconnect : null,
         onError: typeof globalConfig.onError === 'function' ? globalConfig.onError : null,
         onAccountsChanged: typeof globalConfig.onAccountsChanged === 'function' ? globalConfig.onAccountsChanged : null,
-        onChainChanged: typeof globalConfig.onChainChanged === 'function' ? globalConfig.onChainChanged : null
+        onChainChanged: typeof globalConfig.onChainChanged === 'function' ? globalConfig.onChainChanged : null,
+        onPanelOpen: typeof globalConfig.onPanelOpen === 'function' ? globalConfig.onPanelOpen : null,
+        onPanelClose: typeof globalConfig.onPanelClose === 'function' ? globalConfig.onPanelClose : null
       }
     };
   }
@@ -1146,15 +1148,21 @@
     }
 
     function openPanel() {
+      if (panelOpenRef.current) return;
       panelOpenRef.current = true;
       renderAll(core.getState());
+      if (config.callbacks.onPanelOpen) try { config.callbacks.onPanelOpen(); } catch (e) { console.error('[DriveWallet] onPanelOpen', e); }
     }
     function closePanel() {
+      if (!panelOpenRef.current) return;
       panelOpenRef.current = false;
       renderAll(core.getState());
+      if (config.callbacks.onPanelClose) try { config.callbacks.onPanelClose(); } catch (e) { console.error('[DriveWallet] onPanelClose', e); }
     }
     function togglePanel() {
       panelOpenRef.current = !panelOpenRef.current;
+      if (panelOpenRef.current && config.callbacks.onPanelOpen) try { config.callbacks.onPanelOpen(); } catch (e) { console.error('[DriveWallet] onPanelOpen', e); }
+      if (!panelOpenRef.current && config.callbacks.onPanelClose) try { config.callbacks.onPanelClose(); } catch (e) { console.error('[DriveWallet] onPanelClose', e); }
       renderAll(core.getState());
     }
 
