@@ -246,11 +246,21 @@
       };
     }
 
-    // Prefer window.ethereum when available so we use the same provider as the "injected" connection
-    // (aligns with Uniswap's injected connector; avoids EIP-6963 provider not emitting chainChanged in some envs).
+    // In SES/lockdown (e.g. MetaMask LavaMoat), window.ethereum may not get chainChanged or real eth_chainId.
+    // Prefer EIP-6963 provider when available so the dapp uses the channel MetaMask announced for this page.
     function getProvider() {
+      if (eip6963Provider) {
+        if (DEBUG && typeof console !== 'undefined' && console.log) console.log('[DriveWallet] provider: EIP-6963 (MetaMask or first)');
+        return eip6963Provider;
+      }
+      var uuids = Object.keys(eip6963Providers);
+      if (uuids.length > 0) {
+        if (DEBUG && typeof console !== 'undefined' && console.log) console.log('[DriveWallet] provider: EIP-6963 (first announced)');
+        return eip6963Providers[uuids[0]].provider;
+      }
       var ethereum = typeof window !== 'undefined' && window.ethereum;
       if (ethereum) {
+        if (DEBUG && typeof console !== 'undefined' && console.log) console.log('[DriveWallet] provider: window.ethereum (fallback)');
         if (Array.isArray(ethereum)) {
           for (var i = 0; i < ethereum.length; i++) {
             if (ethereum[i] && ethereum[i].isMetaMask === true) return ethereum[i];
@@ -259,9 +269,6 @@
         }
         return ethereum;
       }
-      if (eip6963Provider) return eip6963Provider;
-      var uuids = Object.keys(eip6963Providers);
-      if (uuids.length > 0) return eip6963Providers[uuids[0]].provider;
       return null;
     }
 
@@ -367,9 +374,13 @@
         emit(coreConfig.callbacks.onAccountsChanged, accounts || []);
       };
       state._chainHandler = function (id) {
-        log('chainChanged (EIP-1193)', { chainId: chainIdToHex(id) });
+        var newHex = chainIdToHex(id);
+        if (typeof console !== 'undefined' && console.warn && newHex && state.chainIdHex && !chainIdHexEqual(newHex, state.chainIdHex)) {
+          console.warn('[DriveWallet] Red cambiada (chainChanged):', state.chainIdHex, '->', newHex);
+        }
+        log('chainChanged (EIP-1193)', { chainId: newHex });
         state.chainId = null;
-        state.chainIdHex = chainIdToHex(id);
+        state.chainIdHex = newHex;
         state.networkName = null;
         state.environment = null;
         saveSession(coreConfig.network, state.address, state.chainIdHex, state.networkName);
@@ -384,16 +395,23 @@
       provider.on('accountsChanged', state._accountsHandler);
       provider.on('chainChanged', state._chainHandler);
       // Fallback: some envs don't emit chainChanged; poll eth_chainId so we still detect network change (see DETECCION_Y_CAMBIO_DE_RED_UNISWAP_VS_WIDGET.md).
-      var pollIntervalMs = 2500;
-      state._chainPollTimer = setInterval(function () {
+      function doChainPoll() {
         if (!state.provider || !state.connected) return;
         state.provider.request({ method: 'eth_chainId' }).then(function (id) {
           var hex = chainIdToHex(id);
           if (!hex || chainIdHexEqual(hex, state.chainIdHex)) return;
+          if (typeof console !== 'undefined' && console.warn) {
+            console.warn('[DriveWallet] Red detectada distinta (poll):', state.chainIdHex, '->', hex);
+          }
           log('chain poll: chainId changed', { from: state.chainIdHex, to: hex });
           if (state._chainHandler) state._chainHandler(id);
-        }).catch(function () {});
-      }, pollIntervalMs);
+        }).catch(function (err) {
+          if (DEBUG && typeof console !== 'undefined' && console.warn) console.warn('[DriveWallet] poll eth_chainId error', err);
+        });
+      }
+      var pollIntervalMs = 2500;
+      state._chainPollTimer = setInterval(doChainPoll, pollIntervalMs);
+      setTimeout(doChainPoll, 150);
     }
 
     function getState() {
@@ -1020,6 +1038,9 @@
     var titleSafe = escapeAttr(stateSnapshot.address || '');
     var netTitle = escapeAttr(stateSnapshot.networkName || stateSnapshot.chainIdHex || stateSnapshot.chainId || '');
     var wrongChain = chainParams && stateSnapshot.chainIdHex && chainParams.chainIdHex && !chainIdsEqual(stateSnapshot.chainIdHex, chainParams.chainIdHex);
+    if (wrongChain && typeof console !== 'undefined' && console.warn) {
+      console.warn('[DriveWallet] Mostrando UI red distinta. Actual:', stateSnapshot.chainIdHex, 'Objetivo:', chainParams.chainIdHex);
+    }
     var showSwitchBtn = wrongChain && typeof onSwitchChain === 'function';
     var switchTargetName = (chainParams && chainParams.chainName) ? chainParams.chainName : 'red objetivo';
     var root = document.createElement('div');
