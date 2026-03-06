@@ -273,15 +273,19 @@
         el.textContent = '{}';
         return;
       }
-      var out = {
+      var out = s.toJSON ? s.toJSON() : {
         connected: s.connected,
         address: s.address,
         chainId: s.chainId,
         chainIdHex: s.chainIdHex,
         networkName: s.networkName,
         environment: s.environment,
-        provider: s.provider ? '[EIP-1193 provider]' : null
+        nativeToken: s.nativeToken,
+        tokens: s.tokens || s.tokenBalances || []
       };
+      if (!s.toJSON) {
+        out.provider = s.provider ? '[EIP-1193 provider]' : null;
+      }
       el.textContent = JSON.stringify(out, null, 2);
     }
     document.getElementById('refresh-state').addEventListener('click', showState);

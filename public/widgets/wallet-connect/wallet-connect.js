@@ -171,6 +171,7 @@
       provider: null,
       _accountsHandler: null,
       _chainHandler: null,
+      nativeToken: null,
       tokenBalances: []
     };
     var _onStateChange = null;
@@ -270,7 +271,8 @@
     }
 
     function syncDriveWallet() {
-      window.DriveWallet = {
+      var tokens = (state.tokenBalances || []).slice();
+      var payload = {
         connected: state.connected,
         address: state.address,
         chainId: state.chainId,
@@ -278,8 +280,23 @@
         networkName: state.networkName,
         environment: state.environment,
         provider: state.provider,
-        tokenBalances: state.tokenBalances
+        nativeToken: state.nativeToken,
+        tokens: tokens,
+        tokenBalances: tokens
       };
+      payload.toJSON = function () {
+        return {
+          connected: state.connected,
+          address: state.address,
+          chainId: state.chainId,
+          chainIdHex: state.chainIdHex,
+          networkName: state.networkName,
+          environment: state.environment,
+          nativeToken: state.nativeToken,
+          tokens: (state.tokenBalances || []).slice()
+        };
+      };
+      window.DriveWallet = payload;
     }
 
     function emit(cb, arg) {
@@ -316,6 +333,7 @@
           state.networkName = null;
           state.environment = null;
           state.provider = null;
+          state.nativeToken = null;
           state.tokenBalances = [];
           state._accountsHandler = null;
           state._chainHandler = null;
@@ -328,6 +346,7 @@
           saveSession(coreConfig.network, state.address, state.chainIdHex, state.networkName);
           syncDriveWallet();
           if (_onStateChange) _onStateChange(getState());
+          refreshNativeBalance();
           if ((coreConfig.tokenContracts || []).length > 0) {
             refreshTokenBalances(coreConfig);
           }
@@ -343,6 +362,7 @@
         saveSession(coreConfig.network, state.address, state.chainIdHex, state.networkName);
         syncDriveWallet();
         if (_onStateChange) _onStateChange(getState());
+        refreshNativeBalance();
         if ((coreConfig.tokenContracts || []).length > 0) {
           refreshTokenBalances(coreConfig);
         }
@@ -361,6 +381,7 @@
         networkName: state.networkName,
         environment: state.environment,
         provider: state.provider,
+        nativeToken: state.nativeToken,
         tokenBalances: state.tokenBalances
       };
     }
@@ -441,6 +462,22 @@
       return str;
     }
 
+    function refreshNativeBalance() {
+      if (!state.provider || !state.address || !state.nativeToken) return Promise.resolve();
+      return state.provider.request({ method: 'eth_getBalance', params: [state.address, 'latest'] })
+        .then(function (hex) {
+          var balanceRaw = parseUint256Hex(hex);
+          var decimals = state.nativeToken.decimals;
+          state.nativeToken.balanceRaw = balanceRaw;
+          state.nativeToken.balance = balanceRaw != null && !isNaN(balanceRaw) ? balanceRaw / Math.pow(10, decimals) : 0;
+          syncDriveWallet();
+          if (_onStateChange) _onStateChange(getState());
+        })
+        .catch(function (err) {
+          log('native balance fetch failed', err && err.message);
+        });
+    }
+
     function refreshTokenBalances(coreConfig) {
       var contracts = coreConfig && coreConfig.tokenContracts;
       if (!state.provider || !state.address || !contracts || contracts.length === 0) {
@@ -516,9 +553,11 @@
               state.networkName = session.networkName || chainParams.chainName;
               state.environment = chainParams.environment;
               state.provider = provider;
+              state.nativeToken = chainParams.nativeCurrency ? { name: chainParams.nativeCurrency.name, symbol: chainParams.nativeCurrency.symbol, decimals: chainParams.nativeCurrency.decimals } : null;
               syncDriveWallet();
               setupProviderEvents(chainParams, coreConfig);
               if (_onStateChange) _onStateChange(getState());
+              refreshNativeBalance();
               log('start: session restored', { address: state.address ? state.address.slice(0, 10) + '...' : '' });
             }
           } else {
@@ -561,10 +600,12 @@
         state.networkName = chainParams.chainName;
         state.environment = chainParams.environment;
         state.provider = provider;
+        state.nativeToken = chainParams.nativeCurrency ? { name: chainParams.nativeCurrency.name, symbol: chainParams.nativeCurrency.symbol, decimals: chainParams.nativeCurrency.decimals } : null;
         saveSession(coreConfig.network, state.address, state.chainIdHex, state.networkName);
         syncDriveWallet();
         setupProviderEvents(chainParams, coreConfig);
         if (_onStateChange) _onStateChange(getState());
+        refreshNativeBalance();
         emit(coreConfig.callbacks.onConnect, { address: state.address, chainId: state.chainId, chainIdHex: state.chainIdHex, networkName: state.networkName, environment: state.environment });
         info('Connected. If your wallet still shows a different network, switch it manually in MetaMask, or embed this widget in an iframe that does not run SES/lockdown.');
       }
@@ -659,6 +700,7 @@
       state.networkName = null;
       state.environment = null;
       state.provider = null;
+      state.nativeToken = null;
       state.tokenBalances = [];
       state._accountsHandler = null;
       state._chainHandler = null;
@@ -676,6 +718,7 @@
       getProvider: getProvider,
       getSession: getSession,
       clearSession: clearSession,
+      refreshNativeBalance: refreshNativeBalance,
       refreshTokenBalances: refreshTokenBalances,
       init: init,
       start: start,
@@ -724,6 +767,8 @@
       '.' + PREFIX + 'connected-dot{ width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }' +
       '.' + PREFIX + 'address{ font-family: ui-monospace, monospace; font-size: 0.875em; padding: 0.2em 0; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 8em; }' +
       '.' + PREFIX + 'net{ font-size: 0.75rem; font-weight: 500; padding: 0.15em 0.45em; border-radius: 6px; flex-shrink: 0; }' +
+      '.' + PREFIX + 'refresh{ font-size: 0.8rem; cursor: pointer; text-decoration: none; border-radius: 4px; padding: 0.2em 0.35em; flex-shrink: 0; transition: opacity 0.15s ease; }' +
+      '.' + PREFIX + 'refresh:hover{ opacity: 0.85; }' +
       '.' + PREFIX + 'disconnect{ font-size: 0.8rem; cursor: pointer; text-decoration: none; border-radius: 4px; padding: 0.2em 0.35em; margin-left: auto; flex-shrink: 0; transition: opacity 0.15s ease; }' +
       '.' + PREFIX + 'disconnect:hover{ opacity: 0.85; }' +
       '.' + PREFIX + 'tokens{ margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(0,0,0,0.08); font-size: 0.8rem; }' +
@@ -739,6 +784,8 @@
       '.' + PREFIX + 'root[data-theme="base"] .' + PREFIX + 'connected-dot{ background: #22c55e; }' +
       '.' + PREFIX + 'root[data-theme="base"] .' + PREFIX + 'address{ color: #3730a3; }' +
       '.' + PREFIX + 'root[data-theme="base"] .' + PREFIX + 'net{ background: #e0e7ff; color: #4338ca; }' +
+      '.' + PREFIX + 'root[data-theme="base"] .' + PREFIX + 'refresh{ color: #6b7280; }' +
+      '.' + PREFIX + 'root[data-theme="base"] .' + PREFIX + 'refresh:hover{ color: #374151; }' +
       '.' + PREFIX + 'root[data-theme="base"] .' + PREFIX + 'disconnect{ color: #6b7280; }' +
       '.' + PREFIX + 'root[data-theme="base"] .' + PREFIX + 'disconnect:hover{ color: #374151; }' +
       '/* theme: light */' +
@@ -749,6 +796,8 @@
       '.' + PREFIX + 'root[data-theme="light"] .' + PREFIX + 'connected-dot{ background: #16a34a; }' +
       '.' + PREFIX + 'root[data-theme="light"] .' + PREFIX + 'address{ color: #1f2937; }' +
       '.' + PREFIX + 'root[data-theme="light"] .' + PREFIX + 'net{ background: #e5e7eb; color: #374151; }' +
+      '.' + PREFIX + 'root[data-theme="light"] .' + PREFIX + 'refresh{ color: #6b7280; }' +
+      '.' + PREFIX + 'root[data-theme="light"] .' + PREFIX + 'refresh:hover{ color: #111827; }' +
       '.' + PREFIX + 'root[data-theme="light"] .' + PREFIX + 'disconnect{ color: #6b7280; }' +
       '.' + PREFIX + 'root[data-theme="light"] .' + PREFIX + 'disconnect:hover{ color: #111827; }' +
       '/* theme: dark */' +
@@ -759,6 +808,8 @@
       '.' + PREFIX + 'root[data-theme="dark"] .' + PREFIX + 'connected-dot{ background: #4ade80; }' +
       '.' + PREFIX + 'root[data-theme="dark"] .' + PREFIX + 'address{ color: #e5e7eb; }' +
       '.' + PREFIX + 'root[data-theme="dark"] .' + PREFIX + 'net{ background: #4b5563; color: #d1d5db; }' +
+      '.' + PREFIX + 'root[data-theme="dark"] .' + PREFIX + 'refresh{ color: #9ca3af; }' +
+      '.' + PREFIX + 'root[data-theme="dark"] .' + PREFIX + 'refresh:hover{ color: #f3f4f6; }' +
       '.' + PREFIX + 'root[data-theme="dark"] .' + PREFIX + 'disconnect{ color: #9ca3af; }' +
       '.' + PREFIX + 'root[data-theme="dark"] .' + PREFIX + 'disconnect:hover{ color: #f3f4f6; }' +
       '.' + PREFIX + 'root[data-theme="dark"] .' + PREFIX + 'message[style*="color:#c00"]{ color: #f87171 !important; }';
@@ -822,7 +873,7 @@
     return balance.toExponential(2);
   }
 
-  function renderConnected(container, uiConfig, chainParams, stateSnapshot, onDisconnect) {
+  function renderConnected(container, uiConfig, chainParams, stateSnapshot, onDisconnect, onRefresh) {
     ensureStyles();
     var addr = truncateAddress(stateSnapshot.address);
     var netShort = shortNetworkLabel(uiConfig.network, stateSnapshot.networkName);
@@ -831,27 +882,41 @@
     var root = document.createElement('div');
     root.className = PREFIX + 'root';
     setTheme(root, uiConfig.theme);
+    var refreshLink = typeof onRefresh === 'function' ? '<a class="' + PREFIX + 'refresh" href="#" role="button">Refresh</a>' : '';
     root.innerHTML =
       '<div class="' + PREFIX + 'connected">' +
       '<span class="' + PREFIX + 'connected-dot" aria-hidden="true"></span>' +
       '<span class="' + PREFIX + 'address" title="' + titleSafe + '">' + escapeAttr(addr) + '</span>' +
       '<span class="' + PREFIX + 'net" title="' + netTitle + '">' + escapeAttr(netShort) + '</span>' +
+      refreshLink +
       '<a class="' + PREFIX + 'disconnect" href="#" role="button">Disconnect</a>' +
       '</div>';
+    var native = stateSnapshot.nativeToken;
     var tokens = stateSnapshot.tokenBalances;
-    if (tokens && tokens.length > 0) {
+    var hasNative = native && (native.balance != null || native.symbol);
+    if (hasNative || (tokens && tokens.length > 0)) {
       var tokensDiv = document.createElement('div');
       tokensDiv.className = PREFIX + 'tokens';
       if (uiConfig.theme === 'dark') tokensDiv.setAttribute('data-theme', 'dark');
       tokensDiv.setAttribute('aria-label', 'Saldos de tokens');
-      for (var i = 0; i < tokens.length; i++) {
-        var t = tokens[i];
-        var symbolText = (t.symbol || t.name || 'Token').trim() || 'Token';
-        var balanceText = formatTokenBalance(t.balance);
-        var row = document.createElement('div');
-        row.className = PREFIX + 'token-row';
-        row.innerHTML = '<span class="' + PREFIX + 'token-symbol" title="Token">' + escapeAttr(symbolText) + '</span><span class="' + PREFIX + 'token-balance" title="Balance">' + escapeAttr(balanceText) + '</span>';
-        tokensDiv.appendChild(row);
+      if (hasNative) {
+        var nativeSymbol = (native.symbol || native.name || '').trim() || 'Native';
+        var nativeBalance = formatTokenBalance(native.balance);
+        var nativeRow = document.createElement('div');
+        nativeRow.className = PREFIX + 'token-row';
+        nativeRow.innerHTML = '<span class="' + PREFIX + 'token-symbol" title="Token nativo">' + escapeAttr(nativeSymbol) + '</span><span class="' + PREFIX + 'token-balance" title="Balance">' + escapeAttr(nativeBalance) + '</span>';
+        tokensDiv.appendChild(nativeRow);
+      }
+      if (tokens && tokens.length > 0) {
+        for (var i = 0; i < tokens.length; i++) {
+          var t = tokens[i];
+          var symbolText = (t.symbol || t.name || 'Token').trim() || 'Token';
+          var balanceText = formatTokenBalance(t.balance);
+          var row = document.createElement('div');
+          row.className = PREFIX + 'token-row';
+          row.innerHTML = '<span class="' + PREFIX + 'token-symbol" title="Token">' + escapeAttr(symbolText) + '</span><span class="' + PREFIX + 'token-balance" title="Balance">' + escapeAttr(balanceText) + '</span>';
+          tokensDiv.appendChild(row);
+        }
       }
       root.appendChild(tokensDiv);
     }
@@ -860,6 +925,15 @@
       e.preventDefault();
       onDisconnect();
     });
+    if (typeof onRefresh === 'function') {
+      var refreshLinkEl = root.querySelector('.' + PREFIX + 'refresh');
+      if (refreshLinkEl) {
+        refreshLinkEl.addEventListener('click', function (e) {
+          e.preventDefault();
+          onRefresh();
+        });
+      }
+    }
     container.innerHTML = '';
     container.appendChild(root);
   }
@@ -879,12 +953,20 @@
     var coreConfig = { network: config.network, callbacks: config.callbacks, tokenContracts: config.tokenContracts };
     var chainParamsRef = { current: null };
 
+    function doRefreshBalances() {
+      core.refreshNativeBalance();
+      if (config.tokenContracts && config.tokenContracts.length > 0) {
+        core.refreshTokenBalances(coreConfig);
+      }
+    }
+    try {
+      window.DriveWalletWidget = window.DriveWalletWidget || {};
+      window.DriveWalletWidget.refreshBalances = doRefreshBalances;
+    } catch (e) {}
+
     core.init({
       onStateChange: function (stateSnapshot) {
         if (stateSnapshot.connected && !chainParamsRef.current) return;
-        if (stateSnapshot.connected && (config.tokenContracts || []).length > 0) {
-          core.refreshTokenBalances(coreConfig);
-        }
         forEachContainer(config, function (el, uiConfig) {
           if (stateSnapshot.connected) {
             renderConnected(el, uiConfig, chainParamsRef.current, stateSnapshot, function onDisconnectClick() {
@@ -898,7 +980,7 @@
                   renderReady(el2, uiConfig2, chainParamsRef.current, function () { core.connect(chainParamsRef.current, coreConfig); });
                 });
               }
-            });
+            }, doRefreshBalances);
           } else {
             renderReady(el, uiConfig, chainParamsRef.current, function () { core.connect(chainParamsRef.current, coreConfig); });
           }
@@ -925,12 +1007,9 @@
           forEachContainer(config, function (el, uiConfig) { renderNoWallet(el, uiConfig); });
           return;
         }
-        if (stateSnapshot.connected && (config.tokenContracts || []).length > 0) {
-          core.refreshTokenBalances(coreConfig);
-        }
         forEachContainer(config, function (el, uiConfig) {
           if (stateSnapshot.connected) {
-            renderConnected(el, uiConfig, chainParams, stateSnapshot, function () { core.disconnect(coreConfig); });
+            renderConnected(el, uiConfig, chainParams, stateSnapshot, function () { core.disconnect(coreConfig); }, doRefreshBalances);
           } else {
             renderReady(el, uiConfig, chainParams, function () { core.connect(chainParams, coreConfig); });
           }

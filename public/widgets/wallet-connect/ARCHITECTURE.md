@@ -46,11 +46,29 @@ Optional callbacks set by the implementer before loading the script:
 
 **Guarantee:** The **names, invocation timing, and argument shapes** of these callbacks will not change in a breaking way. New optional callbacks may be added.
 
-### 2.3 Configuration (data attributes and global)
+### 2.3 Programmatic refresh: `refreshBalances()`
+
+The widget exposes a function so that implementers can refresh native and token balances on demand (e.g. after a transfer, or from a custom button):
+
+- **Global:** `window.DriveWalletWidget.refreshBalances` — set by the widget after it loads.
+- **Behavior:** Calls the provider for the current address: `eth_getBalance` (native) and, if `tokenContracts` are configured, one `eth_call` per token (balance + metadata). Updates `window.DriveWallet` and re-renders the widget.
+- **When to call:** Whenever you want the displayed balances to reflect the latest on-chain state (e.g. after the user sends a transaction, or on a timer). The widget also updates automatically on `accountsChanged` and `chainChanged`.
+
+**Example:**
+
+```js
+if (window.DriveWalletWidget && typeof window.DriveWalletWidget.refreshBalances === 'function') {
+  window.DriveWalletWidget.refreshBalances();
+}
+```
+
+A **Refresh** button is shown in the connected-state UI that calls this same logic. The function is safe to call when disconnected (it no-ops if there is no connected address).
+
+### 2.4 Configuration (data attributes and global)
 
 Implementers configure the widget via:
 
-- **Global:** `window.DriveWalletWidget = { network?, targetId?, theme?, buttonLabel?, ...callbacks }` (overrides when present)
+- **Global:** `window.DriveWalletWidget = { network?, targetId?, theme?, buttonLabel?, ...callbacks }` (overrides when present). The widget may add `refreshBalances` to this object after load.
 - **Script tag (data / logic):** `data-network`, `data-target-id`, `data-token-contracts` (comma-separated contract addresses) — which network, where to mount, and which ERC-20 tokens to show balances for.
 - **Container / div (UI only):** `data-theme`, `data-button-label` — appearance and copy
 - **Global:** `tokenContracts` (array of addresses). Future: `tokenContractsUrl` (API URL returning JSON array of contract addresses).

@@ -228,7 +228,18 @@ interface DriveWalletState {
 
 Implementers and other widgets must treat this object as read-only. The widget is the single owner of connection state.
 
-### 7.2 Callbacks
+### 7.2 Programmatic refresh: `refreshBalances()`
+
+The widget adds a function to the global configuration object so that implementers can refresh balances on demand:
+
+- **`window.DriveWalletWidget.refreshBalances`** (function, set by the widget after load)
+- **Effect:** Requests the current native balance (`eth_getBalance`) and, if token contracts are configured, each token’s balance and metadata (`eth_call`). Updates the state object and the connected-state UI.
+- **Use case:** Update displayed balances after a transfer, on a custom “Refresh” button, or on a schedule. The widget also updates automatically on account/chain change events.
+- **Safety:** Safe to call when disconnected; does nothing if no address is connected.
+
+The connected-state UI includes a **Refresh** link that performs the same refresh. Both the button and a programmatic call use the same internal logic.
+
+### 7.3 Callbacks
 
 Callbacks are set via the global configuration object ([Section 6.2](#62-global-configuration-object)). The widget invokes them at the specified lifecycle events. Signatures are as above; the widget does not guarantee a particular `this` binding.
 
