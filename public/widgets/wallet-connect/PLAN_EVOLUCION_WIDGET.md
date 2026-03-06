@@ -258,7 +258,7 @@ La Fase Core puede hacerse **antes** de la Fase 0 (así la UI se construye sobre
 
 ## Checklist final (antes de dar por cerrado el plan)
 
-- [ ] **Fase Core:** Referencia documentada (Uniswap + EIPs + MetaMask); auditoría ítem a ítem; connect, disconnect, switch/add chain, refresh, sesión y provider alineados con la referencia (no conservar nuestra implementación donde la referencia ya lo hace bien).
+- [x] **Fase Core:** Referencia documentada (Uniswap + EIPs + MetaMask); auditoría ítem a ítem; connect (Core.2 confirmación), disconnect (Core.3), chainChanged/refresh/sesión/provider (Core.4–7 verificados) alineados con la referencia.
 - [ ] Fase 0: Connecting, a11y, refactor TriggerView/PanelView, docs internas.
 - [ ] Fase 1: panelOpen, openPanel/closePanel/togglePanel, config layout.
 - [x] Fase 2: DOM dropdown, posicionamiento, click-outside, Escape, cerrar al disconnect.

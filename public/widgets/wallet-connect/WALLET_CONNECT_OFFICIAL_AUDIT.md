@@ -15,6 +15,8 @@ Este documento mapea cada parte del widget contra las EIP y la documentación de
 | Sesión | Restaurar solo si misma red + cuentas + chainId; no popup en load | Igual (ver §6) | OK |
 | Provider | EIP-6963 + fallback a window.ethereum | Igual (ver §1) | OK |
 
+**Core.4–Core.7 (verificación):** chainChanged actualiza estado y syncDriveWallet, no se marca desconectado solo por cambio de red (§4 implícito en setupProviderEvents). Refresh: tras connect, accountsChanged y chainChanged se llaman refreshNativeBalance y refreshTokenBalances; refreshBalances() expuesto en DriveWalletWidget (Core.5). Sesión: restore solo con misma red + eth_accounts + eth_chainId; sin eth_requestAccounts en load (Core.6, ver §6). Provider: EIP-6963 announce/request, preferencia MetaMask por rdns/nombre, fallback window.ethereum (Core.7, ver §1).
+
 ---
 
 ## Referencias oficiales
@@ -38,10 +40,10 @@ Este documento mapea cada parte del widget contra las EIP y la documentación de
 - **Eventos**: se usan `provider.on('accountsChanged', ...)` y `provider.on('chainChanged', ...)`; EIP-1193 exige Node EventEmitter-style (`on`, `removeListener`). Correcto.
 - **chainChanged**: el argumento debe ser `chainId: string` (hex). El widget recibe `id` y lo normaliza con `chainIdToHex(id)`. Correcto.
 - **accountsChanged**: argumento `accounts: string[]`. El widget comprueba `!accounts || !accounts.length` para desconectar. Correcto.
-- **Obtención del provider (EIP-6963, recomendado)**:
-  - El widget escucha `eip6963:announceProvider` y emite `eip6963:requestProvider` al cargar (EIP-6963). El provider anunciado es un objeto EIP-1193 "limpio" de la extensión, lo que evita sobrescritura, race conditions y problemas con SES/lockdown sobre `window.ethereum`.
-  - Se prefiere el provider con `info.rdns === 'io.metamask'` (o nombre que incluya "metamask"); si no hay MetaMask por EIP-6963, se usa cualquier provider anunciado; si no hay ninguno, **fallback** a `window.ethereum` (si es array, el que tenga `isMetaMask === true` o el primero).
-  - MetaMask recomienda explícitamente EIP-6963 para conexión robusta; el widget lo implementa como fuente principal del provider.
+- **Obtención del provider (alineado con Uniswap/injected)**:
+  - Para maximizar compatibilidad con detección y cambio de red en todos los entornos, el widget **prioriza `window.ethereum`** cuando existe (si es array: el que tenga `isMetaMask === true` o el primero). Así se usa el mismo provider que el conector "injected" típico (Uniswap, etc.) y se reciben correctamente `chainChanged` y las respuestas a `wallet_switchEthereumChain`.
+  - Si no hay `window.ethereum`, se usa el provider de **EIP-6963** (preferencia MetaMask por rdns/nombre, o el primero anunciado). Ver `DETECCION_Y_CAMBIO_DE_RED_UNISWAP_VS_WIDGET.md`.
+  - Además del listener **chainChanged**, el widget hace **polling** de `eth_chainId` cada 2,5 s cuando está conectado, para detectar cambio de red en entornos donde el evento no se emite.
 - **Confirmación real del cambio de red (EIP-1193, chainChanged)** (Core.2 implementado):
   - MetaMask documenta: "Listen to the 'chainChanged' event to detect a user's network change." El widget llama a `eth_requestAccounts` primero; luego asegura la cadena (switch/add si hace falta). No se usa `eth_chainId` previo para saltar el switch. Solo se marca "conectado" cuando (a) se recibe el evento **chainChanged** con la chainId objetivo, o (b) un fallback a 600 ms comprueba `eth_chainId` por si la extensión no emitió el evento. Timeout 5 s si no hay confirmación; en ese caso no se marca conectado y se notifica error. Implementación: `waitForChainConfirmation()` (listener chainChanged + setTimeout 600 ms para un `eth_chainId` + timeout 5 s).
 

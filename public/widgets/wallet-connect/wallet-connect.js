@@ -246,19 +246,23 @@
       };
     }
 
+    // Prefer window.ethereum when available so we use the same provider as the "injected" connection
+    // (aligns with Uniswap's injected connector; avoids EIP-6963 provider not emitting chainChanged in some envs).
     function getProvider() {
+      var ethereum = typeof window !== 'undefined' && window.ethereum;
+      if (ethereum) {
+        if (Array.isArray(ethereum)) {
+          for (var i = 0; i < ethereum.length; i++) {
+            if (ethereum[i] && ethereum[i].isMetaMask === true) return ethereum[i];
+          }
+          return ethereum[0] || null;
+        }
+        return ethereum;
+      }
       if (eip6963Provider) return eip6963Provider;
       var uuids = Object.keys(eip6963Providers);
       if (uuids.length > 0) return eip6963Providers[uuids[0]].provider;
-      var ethereum = window.ethereum;
-      if (!ethereum) return null;
-      if (Array.isArray(ethereum)) {
-        for (var i = 0; i < ethereum.length; i++) {
-          if (ethereum[i] && ethereum[i].isMetaMask === true) return ethereum[i];
-        }
-        return ethereum[0] || null;
-      }
-      return ethereum;
+      return null;
     }
 
     function chainIdToHex(chainId) {
@@ -310,6 +314,10 @@
 
     function removeProviderEvents() {
       var provider = state.provider;
+      if (state._chainPollTimer) {
+        clearInterval(state._chainPollTimer);
+        state._chainPollTimer = null;
+      }
       if (!provider) return;
       if (state._accountsHandler) {
         provider.removeListener('accountsChanged', state._accountsHandler);
@@ -330,7 +338,7 @@
         log('accountsChanged (EIP-1193)', { count: accounts ? accounts.length : 0 });
         if (!accounts || !accounts.length) {
           // Usuario desconectó el sitio en MetaMask o revocó el permiso → mostramos estado desconectado
-          removeProviderEvents();
+          removeProviderEvents(); // also clears _chainPollTimer
           state.connected = false;
           state.address = null;
           state.chainId = null;
@@ -375,6 +383,17 @@
       };
       provider.on('accountsChanged', state._accountsHandler);
       provider.on('chainChanged', state._chainHandler);
+      // Fallback: some envs don't emit chainChanged; poll eth_chainId so we still detect network change (see DETECCION_Y_CAMBIO_DE_RED_UNISWAP_VS_WIDGET.md).
+      var pollIntervalMs = 2500;
+      state._chainPollTimer = setInterval(function () {
+        if (!state.provider || !state.connected) return;
+        state.provider.request({ method: 'eth_chainId' }).then(function (id) {
+          var hex = chainIdToHex(id);
+          if (!hex || chainIdHexEqual(hex, state.chainIdHex)) return;
+          log('chain poll: chainId changed', { from: state.chainIdHex, to: hex });
+          if (state._chainHandler) state._chainHandler(id);
+        }).catch(function () {});
+      }, pollIntervalMs);
     }
 
     function getState() {
@@ -580,29 +599,12 @@
         });
     }
 
-    function connect(chainParams, coreConfig) {
-      info('Connect clicked — network: ' + coreConfig.network + ', chainId: ' + chainParams.chainIdHex);
-      log('connect() called', { network: coreConfig.network, chainIdHex: chainParams.chainIdHex });
-      var provider = getProvider();
-      var providerSource = eip6963Provider && provider === eip6963Provider ? 'eip6963' : 'legacy';
-      log('provider', {
-        source: providerSource,
-        isMetaMask: !!(provider && provider.isMetaMask),
-        providersCount: Array.isArray(window.ethereum) ? window.ethereum.length : 1
-      });
-      if (!provider) {
-        warn('connect: no provider (EIP-6963 or window.ethereum)', null);
-        if (coreConfig.callbacks.onError) coreConfig.callbacks.onError(new Error('No wallet'));
-        return Promise.reject(new Error('No wallet'));
-      }
-      // EIP-3326 / EIP-3085: chainId as hex string.
-      // Flow order for SES/lockdown compatibility: request accounts first to "activate" the provider
-      // (establishes postMessage channel with extension), then switch chain. See WALLET_CONNECT_OFFICIAL_AUDIT.md.
+    // Shared ensure-chain flow: switch/add to chainParams.chainIdHex then set state. Used by connect() and switchToOurChain().
+    function runEnsureChain(account, chainParams, coreConfig, provider) {
       var chainIdHex = String(chainParams.chainIdHex);
-
-      function setStateFromAccounts(account) {
+      function setStateFromAccounts(acc) {
         state.connected = true;
-        state.address = account;
+        state.address = acc;
         state.chainId = chainParams.chainId;
         state.chainIdHex = chainParams.chainIdHex;
         state.networkName = chainParams.chainName;
@@ -618,9 +620,8 @@
           refreshTokenBalances(coreConfig);
         }
         emit(coreConfig.callbacks.onConnect, { address: state.address, chainId: state.chainId, chainIdHex: state.chainIdHex, networkName: state.networkName, environment: state.environment });
-        info('Connected. If your wallet still shows a different network, switch it manually in MetaMask, or embed this widget in an iframe that does not run SES/lockdown.');
+        info('Connected (or switched to target chain).');
       }
-
       function doSwitch() {
         return provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: chainIdHex }] });
       }
@@ -640,7 +641,6 @@
           }]
         }).then(doSwitch);
       }
-      // Core.2: Confirm we're on target chain via chainChanged or 600ms fallback; 5s timeout (no connect without confirmation).
       function waitForChainConfirmation() {
         var timeoutMs = 5000;
         var fallbackDelayMs = 600;
@@ -683,23 +683,23 @@
           var timeoutTimer = setTimeout(function () { fail(new Error('Chain confirmation timeout (5s)')); }, timeoutMs);
         });
       }
-      function ensureChainThenSetState(account) {
+      function ensureChainThenSetState(acc) {
         return provider.request({ method: 'eth_chainId' }).then(function (currentId) {
           var currentHex = chainIdToHex(currentId);
           if (chainIdHexEqual(currentHex, chainIdHex)) {
             log('Already on target chain; waiting for confirmation (chainChanged or 600ms fallback)', { chainId: chainIdHex });
-            return waitForChainConfirmation().then(function () { setStateFromAccounts(account); });
+            return waitForChainConfirmation().then(function () { setStateFromAccounts(acc); });
           }
           log('calling wallet_switchEthereumChain (EIP-3326)', { chainId: chainIdHex });
           return doSwitch()
             .then(function () { return waitForChainConfirmation(); })
-            .then(function () { setStateFromAccounts(account); })
+            .then(function () { setStateFromAccounts(acc); })
             .catch(function (switchErr) {
               var code = switchErr && (switchErr.code || (switchErr.error && switchErr.error.code));
               if (code === 4902) {
                 return doAddThenSwitch()
                   .then(function () { return waitForChainConfirmation(); })
-                  .then(function () { setStateFromAccounts(account); })
+                  .then(function () { setStateFromAccounts(acc); })
                   .catch(function (addErr) {
                     warn('add/switch chain failed', { code: addErr && addErr.code, message: addErr && addErr.message });
                     emit(coreConfig.callbacks.onError, addErr);
@@ -712,9 +712,25 @@
             });
         });
       }
+      return ensureChainThenSetState(account);
+    }
 
-      // 1. Request accounts first (EIP-1102) — in SES/lockdown this can "activate" the provider so
-      // subsequent wallet_switchEthereumChain actually reaches the extension.
+    function connect(chainParams, coreConfig) {
+      info('Connect clicked — network: ' + coreConfig.network + ', chainId: ' + chainParams.chainIdHex);
+      log('connect() called', { network: coreConfig.network, chainIdHex: chainParams.chainIdHex });
+      var provider = getProvider();
+      var providerSource = eip6963Provider && provider === eip6963Provider ? 'eip6963' : 'legacy';
+      log('provider', {
+        source: providerSource,
+        isMetaMask: !!(provider && provider.isMetaMask),
+        providersCount: Array.isArray(window.ethereum) ? window.ethereum.length : 1
+      });
+      if (!provider) {
+        warn('connect: no provider (EIP-6963 or window.ethereum)', null);
+        if (coreConfig.callbacks.onError) coreConfig.callbacks.onError(new Error('No wallet'));
+        return Promise.reject(new Error('No wallet'));
+      }
+      // EIP-3326 / EIP-3085. Request accounts first (SES/lockdown), then ensure chain. See WALLET_CONNECT_OFFICIAL_AUDIT.md.
       info('Requesting account access (popup expected)');
       log('requestAccounts (EIP-1102) first');
       return provider.request({ method: 'eth_requestAccounts' })
@@ -725,13 +741,29 @@
             return;
           }
           log('requestAccounts success', { address: accounts[0] ? accounts[0].slice(0, 10) + '...' : '' });
-          return ensureChainThenSetState(accounts[0]);
+          return runEnsureChain(accounts[0], chainParams, coreConfig, provider);
         })
         .catch(function (err) {
           warn('connect flow error', { message: err && err.message, code: err && err.code });
           if (_onStateChange) _onStateChange(getState());
           emit(coreConfig.callbacks.onError, err);
         });
+    }
+
+    // Switch wallet to our network without re-requesting accounts (Core.4 "volver a nuestra red").
+    function switchToOurChain(chainParams, coreConfig) {
+      var provider = getProvider();
+      var account = state.address;
+      if (!provider || !account) {
+        var err = new Error('Not connected');
+        if (coreConfig.callbacks.onError) coreConfig.callbacks.onError(err);
+        return Promise.reject(err);
+      }
+      info('Switch to our chain — ' + (chainParams.chainName || chainParams.chainIdHex));
+      return runEnsureChain(account, chainParams, coreConfig, provider).catch(function (err) {
+        if (_onStateChange) _onStateChange(getState());
+        throw err;
+      });
     }
 
     function disconnect(coreConfig) {
@@ -770,7 +802,8 @@
       init: init,
       start: start,
       connect: connect,
-      disconnect: disconnect
+      disconnect: disconnect,
+      switchToOurChain: switchToOurChain
     };
   })();
 
@@ -817,8 +850,13 @@
       '.' + PREFIX + 'net{ font-size: 0.75rem; font-weight: 500; padding: 0.15em 0.45em; border-radius: 6px; flex-shrink: 0; }' +
       '.' + PREFIX + 'refresh{ font-size: 0.8rem; cursor: pointer; text-decoration: none; border-radius: 4px; padding: 0.2em 0.35em; flex-shrink: 0; transition: opacity 0.15s ease; }' +
       '.' + PREFIX + 'refresh:hover{ opacity: 0.85; }' +
+      '.' + PREFIX + 'switch-chain{ font-size: 0.8rem; cursor: pointer; text-decoration: none; border-radius: 4px; padding: 0.2em 0.35em; flex-shrink: 0; transition: opacity 0.15s ease; }' +
+      '.' + PREFIX + 'switch-chain:hover{ opacity: 0.85; }' +
       '.' + PREFIX + 'disconnect{ font-size: 0.8rem; cursor: pointer; text-decoration: none; border-radius: 4px; padding: 0.2em 0.35em; margin-left: auto; flex-shrink: 0; transition: opacity 0.15s ease; }' +
       '.' + PREFIX + 'disconnect:hover{ opacity: 0.85; }' +
+      '.' + PREFIX + 'wrong-chain-msg{ font-size: 0.8rem; padding: 0.4rem 0.6rem; margin-bottom: 0.4rem; border-radius: 6px; font-weight: 500; }' +
+      '.' + PREFIX + 'net-wrong{ font-weight: 600; }' +
+      '.' + PREFIX + 'trigger-wrong-chain{ border-left: 3px solid #f59e0b; box-sizing: border-box; }' +
       '.' + PREFIX + 'tokens{ margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(0,0,0,0.08); font-size: 0.8rem; }' +
       '.' + PREFIX + 'tokens[data-theme="dark"]{ border-top-color: rgba(255,255,255,0.12); }' +
       '.' + PREFIX + 'token-row{ display: flex; justify-content: space-between; gap: 0.5rem; padding: 0.2em 0; }' +
@@ -834,8 +872,13 @@
       '.' + PREFIX + 'root[data-theme="base"] .' + PREFIX + 'net{ background: #e0e7ff; color: #4338ca; }' +
       '.' + PREFIX + 'root[data-theme="base"] .' + PREFIX + 'refresh{ color: #6b7280; }' +
       '.' + PREFIX + 'root[data-theme="base"] .' + PREFIX + 'refresh:hover{ color: #374151; }' +
+      '.' + PREFIX + 'root[data-theme="base"] .' + PREFIX + 'switch-chain{ color: #6b7280; }' +
+      '.' + PREFIX + 'root[data-theme="base"] .' + PREFIX + 'switch-chain:hover{ color: #374151; }' +
       '.' + PREFIX + 'root[data-theme="base"] .' + PREFIX + 'disconnect{ color: #6b7280; }' +
       '.' + PREFIX + 'root[data-theme="base"] .' + PREFIX + 'disconnect:hover{ color: #374151; }' +
+      '.' + PREFIX + 'root[data-theme="base"] .' + PREFIX + 'wrong-chain-msg{ background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; }' +
+      '.' + PREFIX + 'root[data-theme="base"] .' + PREFIX + 'net-wrong{ background: #fcd34d !important; color: #78350f !important; }' +
+      '.' + PREFIX + 'root[data-theme="base"] .' + PREFIX + 'trigger-wrong-chain{ border-left-color: #f59e0b; }' +
       '/* theme: light */' +
       '.' + PREFIX + 'root[data-theme="light"] .' + PREFIX + 'message{ color: #4b5563; }' +
       '.' + PREFIX + 'root[data-theme="light"] .' + PREFIX + 'button{ background: #fff; color: #111827; border: 2px solid #d1d5db; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }' +
@@ -846,8 +889,13 @@
       '.' + PREFIX + 'root[data-theme="light"] .' + PREFIX + 'net{ background: #e5e7eb; color: #374151; }' +
       '.' + PREFIX + 'root[data-theme="light"] .' + PREFIX + 'refresh{ color: #6b7280; }' +
       '.' + PREFIX + 'root[data-theme="light"] .' + PREFIX + 'refresh:hover{ color: #111827; }' +
+      '.' + PREFIX + 'root[data-theme="light"] .' + PREFIX + 'switch-chain{ color: #6b7280; }' +
+      '.' + PREFIX + 'root[data-theme="light"] .' + PREFIX + 'switch-chain:hover{ color: #111827; }' +
       '.' + PREFIX + 'root[data-theme="light"] .' + PREFIX + 'disconnect{ color: #6b7280; }' +
       '.' + PREFIX + 'root[data-theme="light"] .' + PREFIX + 'disconnect:hover{ color: #111827; }' +
+      '.' + PREFIX + 'root[data-theme="light"] .' + PREFIX + 'wrong-chain-msg{ background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; }' +
+      '.' + PREFIX + 'root[data-theme="light"] .' + PREFIX + 'net-wrong{ background: #fcd34d !important; color: #78350f !important; }' +
+      '.' + PREFIX + 'root[data-theme="light"] .' + PREFIX + 'trigger-wrong-chain{ border-left-color: #f59e0b; }' +
       '/* theme: dark */' +
       '.' + PREFIX + 'root[data-theme="dark"] .' + PREFIX + 'message{ color: #9ca3af; }' +
       '.' + PREFIX + 'root[data-theme="dark"] .' + PREFIX + 'button{ background: linear-gradient(180deg, #4b5563 0%, #374151 100%); color: #f9fafb; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }' +
@@ -857,6 +905,11 @@
       '.' + PREFIX + 'root[data-theme="dark"] .' + PREFIX + 'address{ color: #e5e7eb; }' +
       '.' + PREFIX + 'root[data-theme="dark"] .' + PREFIX + 'net{ background: #4b5563; color: #d1d5db; }' +
       '.' + PREFIX + 'root[data-theme="dark"] .' + PREFIX + 'refresh{ color: #9ca3af; }' +
+      '.' + PREFIX + 'root[data-theme="dark"] .' + PREFIX + 'switch-chain{ color: #9ca3af; }' +
+      '.' + PREFIX + 'root[data-theme="dark"] .' + PREFIX + 'switch-chain:hover{ color: #e5e7eb; }' +
+      '.' + PREFIX + 'root[data-theme="dark"] .' + PREFIX + 'wrong-chain-msg{ background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid #f59e0b; }' +
+      '.' + PREFIX + 'root[data-theme="dark"] .' + PREFIX + 'net-wrong{ background: #b45309 !important; color: #fef3c7 !important; }' +
+      '.' + PREFIX + 'root[data-theme="dark"] .' + PREFIX + 'trigger-wrong-chain{ border-left-color: #f59e0b; }' +
       '.' + PREFIX + 'root[data-theme="dark"] .' + PREFIX + 'refresh:hover{ color: #f3f4f6; }' +
       '.' + PREFIX + 'root[data-theme="dark"] .' + PREFIX + 'disconnect{ color: #9ca3af; }' +
       '.' + PREFIX + 'root[data-theme="dark"] .' + PREFIX + 'disconnect:hover{ color: #f3f4f6; }' +
@@ -953,23 +1006,37 @@
     return balance.toExponential(2);
   }
 
-  function renderConnected(container, uiConfig, chainParams, stateSnapshot, onDisconnect, onRefresh) {
+  function chainIdsEqual(a, b) {
+    if (a == null || b == null) return a === b;
+    var na = parseInt(String(a).replace(/^0x/i, ''), 16);
+    var nb = parseInt(String(b).replace(/^0x/i, ''), 16);
+    return !isNaN(na) && !isNaN(nb) && na === nb;
+  }
+
+  function renderConnected(container, uiConfig, chainParams, stateSnapshot, onDisconnect, onRefresh, onSwitchChain) {
     ensureStyles();
     var addr = truncateAddress(stateSnapshot.address);
     var netShort = shortNetworkLabel(uiConfig.network, stateSnapshot.networkName);
     var titleSafe = escapeAttr(stateSnapshot.address || '');
     var netTitle = escapeAttr(stateSnapshot.networkName || stateSnapshot.chainIdHex || stateSnapshot.chainId || '');
+    var wrongChain = chainParams && stateSnapshot.chainIdHex && chainParams.chainIdHex && !chainIdsEqual(stateSnapshot.chainIdHex, chainParams.chainIdHex);
+    var showSwitchBtn = wrongChain && typeof onSwitchChain === 'function';
+    var switchTargetName = (chainParams && chainParams.chainName) ? chainParams.chainName : 'red objetivo';
     var root = document.createElement('div');
-    root.className = PREFIX + 'root';
+    root.className = PREFIX + 'root' + (wrongChain ? ' ' + PREFIX + 'wrong-chain' : '');
     root.setAttribute('role', 'region');
-    root.setAttribute('aria-label', 'Wallet connected');
+    root.setAttribute('aria-label', wrongChain ? 'Wallet connected on a different network' : 'Wallet connected');
     setTheme(root, uiConfig.theme);
     var refreshLink = typeof onRefresh === 'function' ? '<a class="' + PREFIX + 'refresh" href="#" role="button" aria-label="Refresh balances" tabindex="0">Refresh</a>' : '';
+    var switchLink = showSwitchBtn ? '<a class="' + PREFIX + 'switch-chain" href="#" role="button" aria-label="Usar ' + escapeAttr(switchTargetName) + '" tabindex="0">Volver a ' + escapeAttr(switchTargetName) + '</a>' : '';
+    var netClass = PREFIX + 'net' + (wrongChain ? ' ' + PREFIX + 'net-wrong' : '');
     root.innerHTML =
+      (wrongChain ? '<div class="' + PREFIX + 'wrong-chain-msg" role="alert">Estás en otra red. Cambia a la red del widget para continuar.</div>' : '') +
       '<div class="' + PREFIX + 'connected">' +
       '<span class="' + PREFIX + 'connected-dot" aria-hidden="true"></span>' +
       '<span class="' + PREFIX + 'address" title="' + titleSafe + '">' + escapeAttr(addr) + '</span>' +
-      '<span class="' + PREFIX + 'net" title="' + netTitle + '">' + escapeAttr(netShort) + '</span>' +
+      '<span class="' + netClass + '" title="' + netTitle + '">' + escapeAttr(netShort) + '</span>' +
+      switchLink +
       refreshLink +
       '<a class="' + PREFIX + 'disconnect" href="#" role="button" aria-label="Disconnect" tabindex="0">Disconnect</a>' +
       '</div>';
@@ -1031,18 +1098,33 @@
         });
       }
     }
+    if (showSwitchBtn && typeof onSwitchChain === 'function') {
+      var switchEl = root.querySelector('.' + PREFIX + 'switch-chain');
+      if (switchEl) {
+        switchEl.addEventListener('click', function (e) {
+          e.preventDefault();
+          onSwitchChain();
+        });
+        switchEl.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onSwitchChain();
+          }
+        });
+      }
+    }
     container.innerHTML = '';
     container.appendChild(root);
   }
 
   // Panel content: Connecting, Ready (button), or Connected (bar). Used by Bridge for inline layout; later also for dropdown panel.
-  function renderPanelContent(container, stateSnapshot, uiConfig, chainParams, onConnect, onDisconnect, onRefresh, isConnecting) {
+  function renderPanelContent(container, stateSnapshot, uiConfig, chainParams, onConnect, onDisconnect, onRefresh, onSwitchChain, isConnecting) {
     if (isConnecting) {
       renderConnecting(container, uiConfig);
       return;
     }
     if (stateSnapshot && stateSnapshot.connected) {
-      renderConnected(container, uiConfig, chainParams, stateSnapshot, onDisconnect, onRefresh);
+      renderConnected(container, uiConfig, chainParams, stateSnapshot, onDisconnect, onRefresh, onSwitchChain);
       return;
     }
     renderReady(container, uiConfig, chainParams, onConnect);
@@ -1051,8 +1133,9 @@
   // Trigger view (button when disconnected, pill when connected). For inline layout not used separately; for dropdown (Fase 2) will be the clickable trigger.
   function renderTriggerInline(container, stateSnapshot, uiConfig, chainParams, isConnecting, onTriggerClick) {
     ensureStyles();
+    var wrongChainTrigger = chainParams && stateSnapshot && stateSnapshot.connected && stateSnapshot.chainIdHex && chainParams.chainIdHex && !chainIdsEqual(stateSnapshot.chainIdHex, chainParams.chainIdHex);
     var root = document.createElement('div');
-    root.className = PREFIX + 'root ' + PREFIX + 'trigger';
+    root.className = PREFIX + 'root ' + PREFIX + 'trigger' + (wrongChainTrigger ? ' ' + PREFIX + 'wrong-chain' : '');
     setTheme(root, uiConfig.theme);
     if (isConnecting || !stateSnapshot || !stateSnapshot.connected) {
       var btn = document.createElement('button');
@@ -1072,9 +1155,9 @@
     } else {
       var pill = document.createElement('button');
       pill.type = 'button';
-      pill.className = PREFIX + 'connected';
+      pill.className = PREFIX + 'connected' + (wrongChainTrigger ? ' ' + PREFIX + 'trigger-wrong-chain' : '');
       pill.setAttribute('role', 'button');
-      pill.setAttribute('aria-label', 'Wallet connected: ' + truncateAddress(stateSnapshot.address));
+      pill.setAttribute('aria-label', wrongChainTrigger ? 'Wallet connected on a different network. Open to switch.' : 'Wallet connected: ' + truncateAddress(stateSnapshot.address));
       pill.textContent = truncateAddress(stateSnapshot.address) + ' \u2022 ' + shortNetworkLabel(uiConfig.network, stateSnapshot.networkName);
       if (typeof onTriggerClick === 'function') {
         pill.addEventListener('click', function (e) {
@@ -1124,6 +1207,16 @@
       if (config.layout === 'dropdown') closePanel();
     }
 
+    function onSwitchChainClick() {
+      var cp = chainParamsRef.current;
+      if (!cp) return;
+      core.switchToOurChain(cp, coreConfig).then(function () {
+        renderAll(core.getState());
+      }).catch(function () {
+        renderAll(core.getState());
+      });
+    }
+
     function renderAll(stateSnapshot) {
       forEachContainer(config, function (el, uiConfig) {
         if (uiConfig.layout === 'dropdown') {
@@ -1149,7 +1242,7 @@
             panelContainer.style.top = (triggerRect.bottom + 4) + 'px';
             wrap.appendChild(panelContainer);
             panelElRef.current = panelContainer;
-            renderPanelContent(panelContainer, stateSnapshot, uiConfig, chainParamsRef.current, connectWrapper, onDisconnectClick, doRefreshBalances, isConnectingRef.current);
+            renderPanelContent(panelContainer, stateSnapshot, uiConfig, chainParamsRef.current, connectWrapper, onDisconnectClick, doRefreshBalances, onSwitchChainClick, isConnectingRef.current);
             var panelRect = panelContainer.getBoundingClientRect();
             var winH = typeof window !== 'undefined' ? window.innerHeight : 600;
             if (panelRect.bottom > winH - 8 && triggerRect.top >= panelRect.height + 8) {
@@ -1161,7 +1254,7 @@
         } else {
           triggerElRef.current = null;
           panelElRef.current = null;
-          renderPanelContent(el, stateSnapshot, uiConfig, chainParamsRef.current, connectWrapper, onDisconnectClick, doRefreshBalances, isConnectingRef.current);
+          renderPanelContent(el, stateSnapshot, uiConfig, chainParamsRef.current, connectWrapper, onDisconnectClick, doRefreshBalances, onSwitchChainClick, isConnectingRef.current);
         }
       });
     }

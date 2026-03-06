@@ -305,6 +305,7 @@ Suggested classes (non-exhaustive):
 | `.drive-wc-address` | Element showing the truncated address. |
 | `.drive-wc-network` | Element showing the network name or chain ID. |
 | `.drive-wc-disconnect` | Disconnect control. |
+| `.drive-wc-switch-chain` | When connected on a different chain: link/button to switch back to the widget’s network (“Volver a [network name]”). |
 | `.drive-wc-message` | Status or error message. |
 | `.drive-wc-loading` | Loading state indicator. |
 | `.drive-wc-trigger` | In dropdown layout: the clickable trigger (button or connected pill) that opens the panel. |
