@@ -124,6 +124,8 @@
     if (tokenContracts.length === 0 && network === 'testnet') {
       tokenContracts = ['0xdacD1C99ffe47E63fc6C1a41C7306e559Eb3A6fa'];
     }
+    var layout = (globalConfig.layout || (script && script.getAttribute('data-layout')) || (container && container.getAttribute('data-layout')) || 'inline').toLowerCase();
+    if (layout !== 'dropdown') layout = 'inline';
     // Future: if globalConfig.tokenContractsUrl is set, fetch JSON (array of addresses) and use as tokenContracts
     return {
       network: network,
@@ -131,6 +133,7 @@
       container: container,
       containers: containers,
       theme: theme,
+      layout: layout,
       buttonLabel: globalConfig.buttonLabel || (container && container.getAttribute('data-button-label')) || 'Connect to Infinite Drive',
       tokenContracts: tokenContracts,
       callbacks: {
@@ -148,7 +151,7 @@
     if (config.containers && config.containers.length > 0) {
       for (var i = 0; i < config.containers.length; i++) {
         var c = config.containers[i];
-        var cfg = { network: config.network, targetId: config.targetId, container: c.el, containers: config.containers, theme: c.theme, buttonLabel: config.buttonLabel, callbacks: config.callbacks };
+        var cfg = { network: config.network, targetId: config.targetId, container: c.el, containers: config.containers, theme: c.theme, layout: config.layout, buttonLabel: config.buttonLabel, callbacks: config.callbacks };
         fn(c.el, cfg);
       }
     } else if (config.container) {
@@ -1045,6 +1048,7 @@
     var coreConfig = { network: config.network, callbacks: config.callbacks, tokenContracts: config.tokenContracts };
     var chainParamsRef = { current: null };
     var isConnectingRef = { current: false };
+    var panelOpenRef = { current: false };
 
     function doRefreshBalances() {
       core.refreshNativeBalance();
@@ -1093,9 +1097,25 @@
         });
     }
 
+    function openPanel() {
+      panelOpenRef.current = true;
+      renderAll(core.getState());
+    }
+    function closePanel() {
+      panelOpenRef.current = false;
+      renderAll(core.getState());
+    }
+    function togglePanel() {
+      panelOpenRef.current = !panelOpenRef.current;
+      renderAll(core.getState());
+    }
+
     try {
       window.DriveWalletWidget = window.DriveWalletWidget || {};
       window.DriveWalletWidget.refreshBalances = doRefreshBalances;
+      window.DriveWalletWidget.openPanel = openPanel;
+      window.DriveWalletWidget.closePanel = closePanel;
+      window.DriveWalletWidget.togglePanel = togglePanel;
     } catch (e) {}
 
     core.init({
