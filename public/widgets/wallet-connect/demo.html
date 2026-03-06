@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -21,6 +21,88 @@
       letter-spacing: 0.08em;
       color: #00aa55;
       margin-bottom: 0.75rem;
+    }
+    .demo-options {
+      margin: 1.5rem 0;
+      padding: 1rem 1.25rem;
+      border: 1px solid #00ff4144;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.2);
+      max-width: 36rem;
+    }
+    .demo-options .demo-label {
+      display: block;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #00aa55;
+      margin-bottom: 0.75rem;
+    }
+    .demo-options label {
+      display: block;
+      margin: 0.5rem 0;
+      color: #00dd88;
+      font-size: 0.9rem;
+    }
+    .demo-options select,
+    .demo-options input[type="text"] {
+      margin-left: 0.5rem;
+      padding: 0.35rem 0.5rem;
+      font-family: inherit;
+      font-size: 0.9rem;
+      background: rgba(0, 0, 0, 0.3);
+      color: #00ff41;
+      border: 1px solid #00ff4144;
+      border-radius: 4px;
+    }
+    .demo-options input[type="text"] {
+      min-width: 16rem;
+    }
+    .demo-code-box {
+      margin: 1.5rem 0;
+      padding: 0;
+      border: 1px solid #006633;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.35);
+      max-width: 36rem;
+      overflow: hidden;
+    }
+    .demo-code-box .demo-label {
+      display: block;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #00aa55;
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid #00ff4122;
+      background: rgba(0, 0, 0, 0.2);
+    }
+    .demo-code-box pre {
+      margin: 0;
+      padding: 0.75rem 1rem;
+      font-size: 0.8rem;
+      overflow: auto;
+      color: #00dd88;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .demo-code-box .demo-actions {
+      padding: 0.5rem 0.75rem;
+      border-top: 1px solid #00ff4122;
+      background: rgba(0, 0, 0, 0.15);
+    }
+    .demo-code-box .demo-actions button {
+      font-family: inherit;
+      font-size: 0.85rem;
+      padding: 0.35rem 0.75rem;
+      background: rgba(0, 255, 65, 0.15);
+      color: #00ff41;
+      border: 1px solid #00ff4144;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .demo-code-box .demo-actions button:hover {
+      background: rgba(0, 255, 65, 0.25);
     }
     .demo-output-box {
       margin: 1.5rem 0;
@@ -70,38 +152,137 @@
   </style>
 </head>
 <body>
-  <p class="back"><a href="index.html">← Back to Wallet Connect</a></p>
+  <p class="back"><a href="index.html">← Volver a Wallet Connect</a></p>
   <h1>Wallet Connect — Demo</h1>
   <p class="subtitle">Project 42 · Infinite Drive Ecosystem</p>
-  <p>Three instances with different themes, sharing the same session: connect in any one and all three update. Serve over HTTP (e.g. <code>npx serve public</code>) so the script can load <code>network-data.json</code>.</p>
+  <p>Cambia las opciones debajo; el widget y el código a copiar se actualizan. Sirve la página por HTTP (p. ej. <code>npx serve .</code>) para que el script pueda cargar <code>network-data.json</code>.</p>
 
   <section class="demo-widget-card">
-    <span class="demo-label">Theme: base</span>
-    <div id="drive-wallet-demo-base" data-theme="base"></div>
-  </section>
-  <section class="demo-widget-card">
-    <span class="demo-label">Theme: light</span>
-    <div id="drive-wallet-demo-light" data-theme="light"></div>
-  </section>
-  <section class="demo-widget-card">
-    <span class="demo-label">Theme: dark</span>
-    <div id="drive-wallet-demo-dark" data-theme="dark"></div>
+    <span class="demo-label">Widget en vivo</span>
+    <div id="drive-wallet-widget" data-theme="light"></div>
   </section>
 
-  <section class="demo-output-box">
-    <span class="demo-label">Example output — window.DriveWallet</span>
-    <pre id="state-output">{}</pre>
+  <section class="demo-options">
+    <span class="demo-label">Opciones (cambiar actualiza el widget y el código)</span>
+    <label>
+      Tema:
+      <select id="opt-theme">
+        <option value="base">base</option>
+        <option value="light">light</option>
+        <option value="dark">dark</option>
+      </select>
+    </label>
+    <label>
+      Red:
+      <select id="opt-network">
+        <option value="mainnet">mainnet</option>
+        <option value="testnet">testnet</option>
+        <option value="creative">creative</option>
+      </select>
+    </label>
+    <label>
+      Texto del botón (opcional):
+      <input type="text" id="opt-button-label" placeholder="Conectar a Infinite Drive">
+    </label>
+    <label>
+      <button type="button" id="opt-apply">Aplicar y recargar widget</button>
+    </label>
+  </section>
+
+  <section class="demo-code-box">
+    <span class="demo-label">Código a copiar</span>
+    <pre id="code-output"></pre>
     <div class="demo-actions">
-      <button type="button" id="refresh-state">Refresh</button>
+      <button type="button" id="copy-code">Copiar</button>
     </div>
   </section>
 
-  <script src="wallet-connect.js" data-target-id="drive-wallet-demo-base,drive-wallet-demo-light,drive-wallet-demo-dark" data-network="mainnet"></script>
+  <section class="demo-output-box">
+    <span class="demo-label">Ejemplo de salida — window.DriveWallet</span>
+    <pre id="state-output">{}</pre>
+    <div class="demo-actions">
+      <button type="button" id="refresh-state">Actualizar</button>
+    </div>
+  </section>
+
+  <script>
+    (function () {
+      var params = new URLSearchParams(location.search);
+      var theme = params.get('theme') || 'base';
+      var network = params.get('network') || 'mainnet';
+      var buttonLabel = params.get('buttonLabel') || '';
+
+      var container = document.getElementById('drive-wallet-widget');
+      container.setAttribute('data-theme', theme);
+      if (buttonLabel) container.setAttribute('data-button-label', buttonLabel);
+
+      function escapeAttr(s) {
+        return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      }
+      function buildCode() {
+        var scriptUrl = 'https://assets.infinitedrive.xyz/widgets/wallet-connect/wallet-connect.js';
+        var divAttrs = 'id="drive-wallet-widget" data-theme="' + escapeAttr(theme) + '"';
+        if (buttonLabel) divAttrs += ' data-button-label="' + escapeAttr(buttonLabel) + '"';
+        return '<div ' + divAttrs + '></div>\n<script src="' + scriptUrl + '" data-network="' + escapeAttr(network) + '" data-target-id="drive-wallet-widget" async><\/script>';
+      }
+
+      function renderCodeBlock() {
+        document.getElementById('code-output').textContent = buildCode();
+      }
+
+      document.getElementById('opt-theme').value = theme;
+      document.getElementById('opt-network').value = network;
+      document.getElementById('opt-button-label').value = buttonLabel;
+      renderCodeBlock();
+
+      document.getElementById('opt-apply').addEventListener('click', function () {
+        var url = new URL(location.href);
+        url.searchParams.set('theme', document.getElementById('opt-theme').value);
+        url.searchParams.set('network', document.getElementById('opt-network').value);
+        var bl = document.getElementById('opt-button-label').value.trim();
+        if (bl) url.searchParams.set('buttonLabel', bl);
+        else url.searchParams.delete('buttonLabel');
+        location.href = url.toString();
+      });
+
+      document.getElementById('copy-code').addEventListener('click', function () {
+        var pre = document.getElementById('code-output');
+        navigator.clipboard.writeText(pre.textContent).then(function () {
+          var btn = document.getElementById('copy-code');
+          var orig = btn.textContent;
+          btn.textContent = 'Copied!';
+          setTimeout(function () { btn.textContent = orig; }, 1500);
+        });
+      });
+
+      window.DriveWalletWidget = window.DriveWalletWidget || {};
+      window.DriveWalletWidget.debug = true;
+      var script = document.createElement('script');
+      script.src = 'wallet-connect.js';
+      script.setAttribute('data-target-id', 'drive-wallet-widget');
+      script.setAttribute('data-network', network);
+      script.async = true;
+      document.body.appendChild(script);
+    })();
+  </script>
   <script>
     function showState() {
       var el = document.getElementById('state-output');
       var s = window.DriveWallet;
-      el.textContent = s ? JSON.stringify({ connected: s.connected, address: s.address, chainId: s.chainId, chainIdHex: s.chainIdHex, networkName: s.networkName, environment: s.environment }, null, 2) : '{}';
+      if (!s) {
+        el.textContent = '{}';
+        return;
+      }
+      var out = {
+        connected: s.connected,
+        address: s.address,
+        chainId: s.chainId,
+        chainIdHex: s.chainIdHex,
+        networkName: s.networkName,
+        environment: s.environment,
+        provider: s.provider ? '[EIP-1193 provider]' : null
+      };
+      el.textContent = JSON.stringify(out, null, 2);
     }
     document.getElementById('refresh-state').addEventListener('click', showState);
     setInterval(showState, 2000);

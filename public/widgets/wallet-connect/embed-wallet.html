@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wallet Connect — Embed (sin SES)</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 1rem; margin: 0; background: #111; color: #ddd; }
+    .note { font-size: 0.85rem; color: #888; margin-top: 1rem; }
+    .warn { font-size: 0.85rem; color: #c96; margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+  <p>Cargar esta página en un <strong>iframe</strong> desde una página con SES/lockdown para que el cambio de red funcione (popup y red real en MetaMask).</p>
+  <div id="drive-wallet-widget" data-theme="light"></div>
+  <p class="note">Esta página no incluye ningún script de SES/lockdown; el provider EIP-6963 y wallet_switchEthereumChain se ejecutan en contexto limpio.</p>
+  <p class="warn">Para probar sin SES y con red cargada: desde <code>systems/assets-b/public/</code> ejecuta <code>npx serve . -p 8765</code> y abre <strong>http://localhost:8765/widgets/wallet-connect/embed-wallet.html</strong> (el widget necesita <code>mainnet/network-data.json</code>, que está en <code>public/</code>). Si aun así ves "SES Removing unpermitted intrinsics", puede ser una extensión del navegador inyectando lockdown; prueba en ventana privada o desactiva extensiones.</p>
+  <script>
+    window.DriveWalletWidget = { debug: true };
+  </script>
+  <script src="wallet-connect.js" data-network="mainnet" data-target-id="drive-wallet-widget"></script>
+</body>
+</html>

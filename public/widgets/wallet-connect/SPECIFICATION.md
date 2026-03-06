@@ -166,29 +166,29 @@ Configuration from the global object takes precedence over (or merges with) data
 
 ### 6.1 Data attributes
 
-When the widget reads configuration from the container element or the script tag, the following data attributes are defined. All are optional unless stated.
+Configuration is split by **where** it is set: **script tag = data/logic** (network, target); **container (div) = UI** (theme, button label). All attributes are optional unless stated.
 
-| Attribute | Values | Default | Description |
-|-----------|--------|---------|-------------|
-| `data-network` | `mainnet` \| `testnet` \| `creative` | `mainnet` | Which network’s `network-data.json` to load. |
-| `data-theme` | `light` \| `dark` \| `cyberpunk` \| (implementation-defined) | (implementation-defined) | Visual theme when using default styles. |
-| `data-styles` | `default` \| `custom` \| `none` | `default` | Styling mode: default styles, custom (no default look), or none. See [Section 8](#8-styling-and-customization). |
-| `data-button-label` | string | (e.g. “Connect to Infinite Drive”) | Label for the primary connect button. |
-| `data-mount` | `auto` \| (other) | — | If `auto`, widget may create or use a target element for mounting. |
-| `data-target-id` | string (id) | — | ID of the DOM element into which the widget mounts. |
-| `data-drive-widget` | `wallet-connect` | — | Identifies the element as the wallet-connect widget container (alternative to using a known id). |
+| Attribute | Where | Values | Default | Description |
+|-----------|--------|--------|---------|-------------|
+| `data-network` | script | `mainnet` \| `testnet` \| `creative` | `mainnet` | Which network`s `network-data.json` to load. |
+| `data-target-id` | script | string (id) | — | ID of the DOM element into which the widget mounts. |
+| `data-mount` | script | `auto` \| (other) | — | If `auto`, widget may create or use a target element. |
+| `data-theme` | container | `base` \| `light` \| `dark` \| (impl-defined) | `base` | Visual theme when using default styles. |
+| `data-button-label` | container | string | (e.g. “Connect to Infinite Drive”) | Label for the primary connect button. |
+| `data-styles` | container | `default` \| `custom` \| `none` | `default` | Styling mode. See [Section 8](#8-styling-and-customization). |
+| `data-drive-widget` | container | `wallet-connect` | — | Identifies the element as the wallet-connect container. |
 
 ### 6.2 Global configuration object
 
-If the script finds `window.DriveWalletWidget` (or the chosen global name) at load time, it uses it for configuration and callbacks. Properties may override or complement data attributes.
+If the script finds `window.DriveWalletWidget` (or the chosen global name) at load time, it uses it for configuration and callbacks. Properties may override or complement data attributes. The same convention applies: data/logic (`network`, `targetId`) vs UI (`theme`, `styles`, `buttonLabel`).
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `network` | `string` | Same as `data-network`. |
-| `theme` | `string` | Same as `data-theme`. |
-| `styles` | `string` | Same as `data-styles`. |
-| `buttonLabel` | `string` | Same as `data-button-label`. |
-| `targetId` | `string` | Same as `data-target-id`. |
+| `network` | `string` | Same as `data-network` (script). |
+| `theme` | `string` | Same as `data-theme` (container). |
+| `styles` | `string` | Same as `data-styles` (container). |
+| `buttonLabel` | `string` | Same as `data-button-label` (container). |
+| `targetId` | `string` | Same as `data-target-id` (script). |
 | `onReady` | `function()` | Called when the widget has loaded and network data is ready. |
 | `onConnect` | `function(state)` | Called when the user has connected; `state` includes `address`, `chainId`, `chainIdHex`, `networkName`, `environment`. |
 | `onDisconnect` | `function()` | Called when the user has disconnected via the widget. |

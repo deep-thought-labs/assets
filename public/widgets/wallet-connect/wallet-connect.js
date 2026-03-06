@@ -3,6 +3,7 @@
  * Embeddable widget to connect EIP-1193 wallets to Infinite Drive (mainnet/testnet/creative).
  * Architecture: Core (logic, no DOM) | UI (presentation) | Bridge (orchestration).
  * Stable contract: window.DriveWallet, callbacks, config options — see ARCHITECTURE.md.
+ * Flow follows EIP-1102, EIP-1193, EIP-3085, EIP-3326, EIP-6963 and MetaMask docs — see WALLET_CONNECT_OFFICIAL_AUDIT.md.
  */
 (function () {
   'use strict';
@@ -12,6 +13,51 @@
   var NETWORKS = ['mainnet', 'testnet', 'creative'];
   var THEMES = ['base', 'light', 'dark'];
   var scriptEl = document.currentScript;
+
+  var DEBUG = !!(window.DriveWalletWidget && window.DriveWalletWidget.debug);
+  function log(msg, data) {
+    if (DEBUG && console && typeof console.log === 'function') {
+      console.log('[DriveWallet]', msg, data !== undefined ? data : '');
+    }
+  }
+  function warn(msg, data) {
+    if (console && typeof console.warn === 'function') {
+      console.warn('[DriveWallet]', msg, data !== undefined ? data : '');
+    }
+  }
+  function info(msg, data) {
+    if (console && typeof console.info === 'function') {
+      console.info('[DriveWallet]', msg, data !== undefined ? data : '');
+    }
+  }
+
+  // =============================================================================
+  // EIP-6963: Multi Injected Provider Discovery (official MetaMask recommendation)
+  // Provider via eip6963:announceProvider avoids window.ethereum conflicts/SES issues.
+  // =============================================================================
+  var eip6963Provider = null;
+  var eip6963Providers = {};
+
+  function isMetaMaskEIP6963(info) {
+    if (!info) return false;
+    var rdns = (info.rdns || '').toLowerCase();
+    var name = (info.name || '').toLowerCase();
+    return rdns === 'io.metamask' || rdns.indexOf('io.metamask.') === 0 || name.indexOf('metamask') !== -1;
+  }
+
+  window.addEventListener('eip6963:announceProvider', function (event) {
+    var detail = event.detail;
+    if (!detail || !detail.info || !detail.provider) return;
+    var uuid = detail.info.uuid;
+    if (!uuid) return;
+    eip6963Providers[uuid] = { info: detail.info, provider: detail.provider };
+    if (isMetaMaskEIP6963(detail.info)) {
+      eip6963Provider = detail.provider;
+      log('EIP-6963: MetaMask provider announced', { rdns: detail.info.rdns, name: detail.info.name });
+    }
+  });
+
+  window.dispatchEvent(new Event('eip6963:requestProvider'));
 
   // =============================================================================
   // CONFIG & CONTAINER DISCOVERY (used by Bridge only)
@@ -48,6 +94,7 @@
     return list.length > 0 ? list : null;
   }
 
+  // Script tag = data/logic (network, targetId). Container (div) = UI (theme, buttonLabel). Global overrides when present.
   function getConfig() {
     var globalConfig = window.DriveWalletWidget || {};
     var script = getScript();
@@ -63,7 +110,7 @@
       theme = containers[0].theme;
     } else {
       container = findContainer(script, targetId, network);
-      theme = (globalConfig.theme || (container && container.getAttribute('data-theme')) || (script && script.getAttribute('data-theme')) || 'base').toLowerCase();
+      theme = (globalConfig.theme || (container && container.getAttribute('data-theme')) || 'base').toLowerCase();
     }
     if (THEMES.indexOf(theme) === -1) theme = 'base';
 
@@ -180,9 +227,17 @@
     }
 
     function getProvider() {
+      if (eip6963Provider) return eip6963Provider;
+      var uuids = Object.keys(eip6963Providers);
+      if (uuids.length > 0) return eip6963Providers[uuids[0]].provider;
       var ethereum = window.ethereum;
       if (!ethereum) return null;
-      if (Array.isArray(ethereum)) return ethereum[0] || null;
+      if (Array.isArray(ethereum)) {
+        for (var i = 0; i < ethereum.length; i++) {
+          if (ethereum[i] && ethereum[i].isMetaMask === true) return ethereum[i];
+        }
+        return ethereum[0] || null;
+      }
       return ethereum;
     }
 
@@ -191,6 +246,13 @@
       if (typeof chainId === 'string' && chainId.startsWith('0x')) return chainId;
       var n = typeof chainId === 'string' ? parseInt(chainId, 10) : chainId;
       return isNaN(n) ? null : '0x' + n.toString(16);
+    }
+
+    function chainIdHexEqual(a, b) {
+      if (a == null || b == null) return a === b;
+      var na = typeof a === 'string' && a.startsWith('0x') ? parseInt(a, 16) : (typeof a === 'string' ? parseInt(a, 10) : a);
+      var nb = typeof b === 'string' && b.startsWith('0x') ? parseInt(b, 16) : (typeof b === 'string' ? parseInt(b, 10) : b);
+      return !isNaN(na) && !isNaN(nb) && na === nb;
     }
 
     function syncDriveWallet() {
@@ -226,7 +288,9 @@
       var provider = state.provider;
       if (!provider) return;
       removeProviderEvents();
+      log('provider events: on(accountsChanged, chainChanged)');
       state._accountsHandler = function (accounts) {
+        log('accountsChanged (EIP-1193)', { count: accounts ? accounts.length : 0 });
         if (!accounts || !accounts.length) {
           removeProviderEvents();
           state.connected = false;
@@ -251,6 +315,7 @@
         emit(coreConfig.callbacks.onAccountsChanged, accounts || []);
       };
       state._chainHandler = function (id) {
+        log('chainChanged (EIP-1193)', { chainId: chainIdToHex(id) });
         state.chainId = null;
         state.chainIdHex = chainIdToHex(id);
         state.networkName = null;
@@ -281,14 +346,17 @@
     }
 
     function start(coreConfig, callbacks) {
+      log('start()', { network: coreConfig.network });
       var networkPath = getNetworkDataUrl(coreConfig.network);
       if (!networkPath) {
+        warn('start: no network data URL');
         if (callbacks.onError) callbacks.onError(new Error('Network data URL'));
         return Promise.reject(new Error('Network data URL'));
       }
       var provider = getProvider();
       var session = getSession();
       var wantRestore = session && session.network === coreConfig.network && provider;
+      log('start: fetch + (restore check)', { wantRestore: wantRestore, hasSession: !!session });
       var accountsPromise = wantRestore ? provider.request({ method: 'eth_accounts' }) : Promise.resolve([]);
       var chainIdPromise = wantRestore ? provider.request({ method: 'eth_chainId' }) : Promise.resolve(null);
       var fetchPromise = fetch(networkPath).then(function (r) {
@@ -303,30 +371,41 @@
           var currentChainId = results[2];
           var chainParams = buildAddChainParams(data);
           if (!chainParams) {
+            warn('start: invalid network data');
             if (callbacks.onError) callbacks.onError(new Error('Invalid network data'));
             return;
           }
+          log('start: network data loaded', { chainIdHex: chainParams.chainIdHex, rpcUrlsCount: (chainParams.rpcUrls && chainParams.rpcUrls.length) || 0 });
           if (!provider) {
+            log('start: no provider, onReady (no wallet)');
             if (callbacks.onReady) callbacks.onReady(getState(), chainParams);
             return;
           }
 
           if (wantRestore && accounts && accounts.length > 0 && currentChainId != null) {
             var currentHex = chainIdToHex(currentChainId);
-            var sameChain = currentHex === chainParams.chainIdHex;
-            state.connected = true;
-            state.address = accounts[0];
-            state.chainId = sameChain ? chainParams.chainId : null;
-            state.chainIdHex = sameChain ? chainParams.chainIdHex : currentHex;
-            state.networkName = sameChain ? (session.networkName || chainParams.chainName) : null;
-            state.environment = sameChain ? chainParams.environment : null;
-            state.provider = provider;
-            syncDriveWallet();
-            setupProviderEvents(chainParams, coreConfig);
-            if (_onStateChange) _onStateChange(getState());
+            var sameChain = chainIdHexEqual(currentHex, chainParams.chainIdHex);
+            log('start: restore check', { sameChain: sameChain, currentHex: currentHex, targetHex: chainParams.chainIdHex });
+            if (!sameChain) {
+              log('start: chain mismatch, clear session — user must click Connect to switch');
+              clearSession();
+            } else {
+              state.connected = true;
+              state.address = accounts[0];
+              state.chainId = chainParams.chainId;
+              state.chainIdHex = chainParams.chainIdHex;
+              state.networkName = session.networkName || chainParams.chainName;
+              state.environment = chainParams.environment;
+              state.provider = provider;
+              syncDriveWallet();
+              setupProviderEvents(chainParams, coreConfig);
+              if (_onStateChange) _onStateChange(getState());
+              log('start: session restored', { address: state.address ? state.address.slice(0, 10) + '...' : '' });
+            }
           } else {
             if (session && session.network === coreConfig.network) clearSession();
           }
+          log('start: onReady', { connected: getState().connected });
           if (callbacks.onReady) callbacks.onReady(getState(), chainParams);
         })
         .catch(function (err) {
@@ -336,51 +415,147 @@
     }
 
     function connect(chainParams, coreConfig) {
+      info('Connect clicked — network: ' + coreConfig.network + ', chainId: ' + chainParams.chainIdHex);
+      log('connect() called', { network: coreConfig.network, chainIdHex: chainParams.chainIdHex });
       var provider = getProvider();
+      var providerSource = eip6963Provider && provider === eip6963Provider ? 'eip6963' : 'legacy';
+      log('provider', {
+        source: providerSource,
+        isMetaMask: !!(provider && provider.isMetaMask),
+        providersCount: Array.isArray(window.ethereum) ? window.ethereum.length : 1
+      });
       if (!provider) {
+        warn('connect: no provider (EIP-6963 or window.ethereum)', null);
         if (coreConfig.callbacks.onError) coreConfig.callbacks.onError(new Error('No wallet'));
         return Promise.reject(new Error('No wallet'));
       }
-      var chainIdHex = chainParams.chainIdHex;
-      var addChainThenConnect = function () {
-        return provider.request({ method: 'eth_requestAccounts' })
-          .then(function (accounts) {
-            if (!accounts || !accounts.length) {
-              emit(coreConfig.callbacks.onError, new Error('No accounts'));
-              return;
-            }
-            state.connected = true;
-            state.address = accounts[0];
-            state.chainId = chainParams.chainId;
-            state.chainIdHex = chainParams.chainIdHex;
-            state.networkName = chainParams.chainName;
-            state.environment = chainParams.environment;
-            state.provider = provider;
-            saveSession(coreConfig.network, state.address, state.chainIdHex, state.networkName);
-            syncDriveWallet();
-            setupProviderEvents(chainParams, coreConfig);
-            if (_onStateChange) _onStateChange(getState());
-            emit(coreConfig.callbacks.onConnect, { address: state.address, chainId: state.chainId, chainIdHex: state.chainIdHex, networkName: state.networkName, environment: state.environment });
-          })
-          .catch(function (err) {
-            if (_onStateChange) _onStateChange(getState());
-            emit(coreConfig.callbacks.onError, err);
-          });
-      };
+      // EIP-3326 / EIP-3085: chainId as hex string.
+      // Flow order for SES/lockdown compatibility: request accounts first to "activate" the provider
+      // (establishes postMessage channel with extension), then switch chain. See WALLET_CONNECT_OFFICIAL_AUDIT.md.
+      var chainIdHex = String(chainParams.chainIdHex);
 
-      return provider.request({ method: 'eth_chainId' })
-        .then(function (currentId) {
-          var currentHex = chainIdToHex(currentId);
-          if (currentHex === chainParams.chainIdHex) return addChainThenConnect();
-          return provider.request({
-            method: 'wallet_addEthereumChain',
-            params: [{ chainId: chainParams.chainIdHex, chainName: chainParams.chainName, nativeCurrency: chainParams.nativeCurrency, rpcUrls: chainParams.rpcUrls, blockExplorerUrls: chainParams.blockExplorerUrls }]
-          }).then(function () { return addChainThenConnect(); }).catch(function (err) {
-            if (_onStateChange) _onStateChange(getState());
-            emit(coreConfig.callbacks.onError, err);
+      function setStateFromAccounts(account) {
+        state.connected = true;
+        state.address = account;
+        state.chainId = chainParams.chainId;
+        state.chainIdHex = chainParams.chainIdHex;
+        state.networkName = chainParams.chainName;
+        state.environment = chainParams.environment;
+        state.provider = provider;
+        saveSession(coreConfig.network, state.address, state.chainIdHex, state.networkName);
+        syncDriveWallet();
+        setupProviderEvents(chainParams, coreConfig);
+        if (_onStateChange) _onStateChange(getState());
+        emit(coreConfig.callbacks.onConnect, { address: state.address, chainId: state.chainId, chainIdHex: state.chainIdHex, networkName: state.networkName, environment: state.environment });
+        info('Connected. If your wallet still shows a different network, switch it manually in MetaMask, or embed this widget in an iframe that does not run SES/lockdown.');
+      }
+
+      function ensureChainThenSetState(account) {
+        var CHAIN_CHANGED_TIMEOUT_MS = 5000;
+        return provider.request({ method: 'eth_chainId' }).then(function (actualId) {
+          var actualHex = chainIdToHex(actualId);
+          log('eth_chainId after requestAccounts', { current: actualHex, target: chainIdHex });
+          if (chainIdHexEqual(actualHex, chainIdHex)) {
+            log('Already on target chain', { chainIdHex: chainIdHex });
+            setStateFromAccounts(account);
+            return;
+          }
+          // MetaMask docs: "Listen to the chainChanged event to detect a user's network change."
+          // Only mark connected when we receive chainChanged with target chainId (real UI state).
+          return new Promise(function (resolve, reject) {
+            var settled = false;
+            function settle() {
+              if (settled) return;
+              settled = true;
+              try { provider.removeListener('chainChanged', onChainChanged); } catch (e) {}
+              if (timeoutId) clearTimeout(timeoutId);
+            }
+            var timeoutId = setTimeout(function () {
+              settle();
+              var err = new Error('No se recibió confirmación de cambio de red (evento chainChanged). Cambia la red manualmente en MetaMask o prueba sin extensiones que inyecten SES.');
+              warn(err.message, null);
+              if (_onStateChange) _onStateChange(getState());
+              emit(coreConfig.callbacks.onError, err);
+              reject(err);
+            }, CHAIN_CHANGED_TIMEOUT_MS);
+            function onChainChanged(newChainId) {
+              var newHex = chainIdToHex(newChainId);
+              if (chainIdHexEqual(newHex, chainIdHex)) {
+                log('chainChanged (EIP-1193): red cambiada realmente en MetaMask', { chainId: newHex });
+                settle();
+                setStateFromAccounts(account);
+                resolve();
+              }
+            }
+            provider.on('chainChanged', onChainChanged);
+            info('Requesting wallet to switch chain (popup expected) — confirmación vía evento chainChanged');
+            log('calling wallet_switchEthereumChain (EIP-3326)', { chainId: chainIdHex });
+            function doSwitch() {
+              return provider.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{ chainId: chainIdHex }]
+              });
+            }
+            function doAddThenSwitch() {
+              if (!chainParams.rpcUrls || chainParams.rpcUrls.length === 0) {
+                settle();
+                var errMsg = 'Network has no RPC URL; cannot add chain (EIP-3085 requires rpcUrls).';
+                warn(errMsg, null);
+                emit(coreConfig.callbacks.onError, new Error(errMsg));
+                reject(new Error(errMsg));
+                return;
+              }
+              info('Chain not in wallet; requesting add then switch — chainId: ' + chainIdHex);
+              return provider.request({
+                method: 'wallet_addEthereumChain',
+                params: [{
+                  chainId: chainIdHex,
+                  chainName: chainParams.chainName,
+                  nativeCurrency: chainParams.nativeCurrency,
+                  rpcUrls: chainParams.rpcUrls,
+                  blockExplorerUrls: chainParams.blockExplorerUrls
+                }]
+              }).then(doSwitch);
+            }
+            doSwitch().catch(function (switchErr) {
+              var code = switchErr && (switchErr.code || (switchErr.error && switchErr.error.code));
+              log('wallet_switchEthereumChain result', { code: code, message: switchErr && switchErr.message });
+              if (code === 4902) {
+                doAddThenSwitch().catch(function (addErr) {
+                  settle();
+                  warn('add/switch chain failed', { code: addErr && addErr.code, message: addErr && addErr.message });
+                  if (_onStateChange) _onStateChange(getState());
+                  emit(coreConfig.callbacks.onError, addErr);
+                  reject(addErr);
+                });
+              } else {
+                settle();
+                warn('wallet_switchEthereumChain error', { code: code, message: switchErr && switchErr.message });
+                if (_onStateChange) _onStateChange(getState());
+                emit(coreConfig.callbacks.onError, switchErr);
+                reject(switchErr);
+              }
+            });
           });
+        });
+      }
+
+      // 1. Request accounts first (EIP-1102) — in SES/lockdown this can "activate" the provider so
+      // subsequent wallet_switchEthereumChain actually reaches the extension.
+      info('Requesting account access (popup expected)');
+      log('requestAccounts (EIP-1102) first');
+      return provider.request({ method: 'eth_requestAccounts' })
+        .then(function (accounts) {
+          if (!accounts || !accounts.length) {
+            warn('requestAccounts: no accounts returned');
+            emit(coreConfig.callbacks.onError, new Error('No accounts'));
+            return;
+          }
+          log('requestAccounts success', { address: accounts[0] ? accounts[0].slice(0, 10) + '...' : '' });
+          return ensureChainThenSetState(accounts[0]);
         })
         .catch(function (err) {
+          warn('connect flow error', { message: err && err.message, code: err && err.code });
           if (_onStateChange) _onStateChange(getState());
           emit(coreConfig.callbacks.onError, err);
         });
@@ -574,8 +749,12 @@
 
   function run() {
     var config = getConfig();
-    if (!config.container) return;
-
+    if (!config.container) {
+      warn('run: no container found');
+      return;
+    }
+    info('Widget init — network: ' + config.network + ' (set window.DriveWalletWidget.debug = true for more logs)');
+    log('run()', { network: config.network, hasContainer: true });
     var coreConfig = { network: config.network, callbacks: config.callbacks };
     var chainParamsRef = { current: null };
 

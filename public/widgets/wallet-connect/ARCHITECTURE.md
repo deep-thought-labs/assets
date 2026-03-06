@@ -49,9 +49,9 @@ Optional callbacks set by the implementer before loading the script:
 
 Implementers configure the widget via:
 
-- **Global:** `window.DriveWalletWidget = { network?, targetId?, theme?, buttonLabel?, ...callbacks }`
-- **Script tag:** `data-network`, `data-target-id`, `data-theme`
-- **Container:** `data-theme`, `data-button-label`, `data-network`
+- **Global:** `window.DriveWalletWidget = { network?, targetId?, theme?, buttonLabel?, ...callbacks }` (overrides when present)
+- **Script tag (data / logic):** `data-network`, `data-target-id` — which network and where to mount
+- **Container / div (UI only):** `data-theme`, `data-button-label` — appearance and copy
 
 **Guarantee:** Existing option names and semantics (e.g. `network`, `targetId`, `theme`, `buttonLabel`) remain stable. New options may be added (e.g. new themes) without breaking current ones.
 
