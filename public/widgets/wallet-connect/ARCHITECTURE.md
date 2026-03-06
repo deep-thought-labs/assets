@@ -27,6 +27,7 @@ Always an object with the same shape (updated in real time):
 | `networkName`    | string \| null | Human-readable network name (from network data). |
 | `environment`    | string \| null | From network-data.json `environment` (e.g. `"mainnet"`) when connected to that network; `null` when disconnected or after `chainChanged`. |
 | `provider`       | object \| null | EIP-1193 provider when connected. |
+| `tokenBalances`  | array          | When token contracts are configured: list of `{ address, name, symbol, decimals, balanceRaw, balance }` for ERC-20 tokens. |
 
 **Guarantee:** The widget keeps this object updated on connect, disconnect, and account/chain changes. Other scripts can read it at any time. The **shape and meaning** of these fields will not change in a breaking way.
 
@@ -50,8 +51,9 @@ Optional callbacks set by the implementer before loading the script:
 Implementers configure the widget via:
 
 - **Global:** `window.DriveWalletWidget = { network?, targetId?, theme?, buttonLabel?, ...callbacks }` (overrides when present)
-- **Script tag (data / logic):** `data-network`, `data-target-id` — which network and where to mount
+- **Script tag (data / logic):** `data-network`, `data-target-id`, `data-token-contracts` (comma-separated contract addresses) — which network, where to mount, and which ERC-20 tokens to show balances for.
 - **Container / div (UI only):** `data-theme`, `data-button-label` — appearance and copy
+- **Global:** `tokenContracts` (array of addresses). Future: `tokenContractsUrl` (API URL returning JSON array of contract addresses).
 
 **Guarantee:** Existing option names and semantics (e.g. `network`, `targetId`, `theme`, `buttonLabel`) remain stable. New options may be added (e.g. new themes) without breaking current ones.
 

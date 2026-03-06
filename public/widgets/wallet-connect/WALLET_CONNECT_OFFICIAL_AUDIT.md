@@ -28,7 +28,7 @@ Este documento mapea cada parte del widget contra las EIP y la documentación de
   - Se prefiere el provider con `info.rdns === 'io.metamask'` (o nombre que incluya "metamask"); si no hay MetaMask por EIP-6963, se usa cualquier provider anunciado; si no hay ninguno, **fallback** a `window.ethereum` (si es array, el que tenga `isMetaMask === true` o el primero).
   - MetaMask recomienda explícitamente EIP-6963 para conexión robusta; el widget lo implementa como fuente principal del provider.
 - **Confirmación real del cambio de red (EIP-1193, chainChanged)**:
-  - MetaMask documenta: "Listen to the 'chainChanged' event to detect a user's network change." El widget solo marca "conectado" cuando (a) `eth_chainId` ya coincide con la red deseada (sin llamar a switch), o (b) se recibe el evento **chainChanged** con la chainId objetivo tras `wallet_switchEthereumChain` (o add+switch si 4902). Así se evita la desincronización entre el estado interno del provider y la UI real de MetaMask. Si no llega `chainChanged` en 5 s, se muestra error y no se actualiza el estado.
+  - MetaMask documenta: "Listen to the 'chainChanged' event to detect a user's network change." El widget **siempre** llama a `wallet_switchEthereumChain` (EIP-3326) al conectar; no se usa `eth_chainId` previo para saltar el switch (evita desincronización en SES donde el provider puede devolver la chain "deseada" sin que la UI de MetaMask haya cambiado). Solo se marca "conectado" cuando (a) se recibe el evento **chainChanged** con la chainId objetivo, o (b) tras el switch, un fallback a 600 ms comprueba `eth_chainId` por si la extensión no emitió el evento (ya estaba en la red). Timeout 5 s si no hay confirmación.
 
 ---
 

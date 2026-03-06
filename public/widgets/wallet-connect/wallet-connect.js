@@ -114,6 +114,17 @@
     }
     if (THEMES.indexOf(theme) === -1) theme = 'base';
 
+    var tokenContracts = [];
+    if (Array.isArray(globalConfig.tokenContracts) && globalConfig.tokenContracts.length > 0) {
+      tokenContracts = globalConfig.tokenContracts.map(function (a) { return String(a).trim(); }).filter(Boolean);
+    } else {
+      var attrContracts = (script && script.getAttribute('data-token-contracts')) || (container && container.getAttribute('data-token-contracts')) || '';
+      if (attrContracts) tokenContracts = attrContracts.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+    }
+    if (tokenContracts.length === 0 && network === 'testnet') {
+      tokenContracts = ['0xdacD1C99ffe47E63fc6C1a41C7306e559Eb3A6fa'];
+    }
+    // Future: if globalConfig.tokenContractsUrl is set, fetch JSON (array of addresses) and use as tokenContracts
     return {
       network: network,
       targetId: targetId,
@@ -121,6 +132,7 @@
       containers: containers,
       theme: theme,
       buttonLabel: globalConfig.buttonLabel || (container && container.getAttribute('data-button-label')) || 'Connect to Infinite Drive',
+      tokenContracts: tokenContracts,
       callbacks: {
         onReady: typeof globalConfig.onReady === 'function' ? globalConfig.onReady : null,
         onConnect: typeof globalConfig.onConnect === 'function' ? globalConfig.onConnect : null,
@@ -158,9 +170,13 @@
       environment: null,
       provider: null,
       _accountsHandler: null,
-      _chainHandler: null
+      _chainHandler: null,
+      _chainPollId: null,
+      tokenBalances: []
     };
     var _onStateChange = null;
+    var CHAIN_POLL_MS = 3000;
+    var ERC20 = { name: '0x06fdde03', symbol: '0x95d89b41', decimals: '0x313ce567', balanceOf: '0x70a08231' };
 
     function saveSession(network, address, chainIdHex, networkName) {
       try {
@@ -263,7 +279,8 @@
         chainIdHex: state.chainIdHex,
         networkName: state.networkName,
         environment: state.environment,
-        provider: state.provider
+        provider: state.provider,
+        tokenBalances: state.tokenBalances
       };
     }
 
@@ -272,6 +289,10 @@
     }
 
     function removeProviderEvents() {
+      if (state._chainPollId) {
+        clearInterval(state._chainPollId);
+        state._chainPollId = null;
+      }
       var provider = state.provider;
       if (!provider) return;
       if (state._accountsHandler) {
@@ -292,6 +313,7 @@
       state._accountsHandler = function (accounts) {
         log('accountsChanged (EIP-1193)', { count: accounts ? accounts.length : 0 });
         if (!accounts || !accounts.length) {
+          // Usuario desconectó el sitio en MetaMask o revocó el permiso → mostramos estado desconectado
           removeProviderEvents();
           state.connected = false;
           state.address = null;
@@ -300,6 +322,7 @@
           state.networkName = null;
           state.environment = null;
           state.provider = null;
+          state.tokenBalances = [];
           state._accountsHandler = null;
           state._chainHandler = null;
           clearSession();
@@ -311,6 +334,9 @@
           saveSession(coreConfig.network, state.address, state.chainIdHex, state.networkName);
           syncDriveWallet();
           if (_onStateChange) _onStateChange(getState());
+          if ((coreConfig.tokenContracts || []).length > 0) {
+            refreshTokenBalances(coreConfig);
+          }
         }
         emit(coreConfig.callbacks.onAccountsChanged, accounts || []);
       };
@@ -327,6 +353,25 @@
       };
       provider.on('accountsChanged', state._accountsHandler);
       provider.on('chainChanged', state._chainHandler);
+      // Fallback: si chainChanged no llega (p. ej. SES), detectar cambio de red por polling
+      if (state._chainPollId) clearInterval(state._chainPollId);
+      state._chainPollId = setInterval(function () {
+        if (!state.provider || !state.connected) return;
+        state.provider.request({ method: 'eth_chainId' }).then(function (id) {
+          var currentHex = chainIdToHex(id);
+          if (currentHex != null && !chainIdHexEqual(currentHex, state.chainIdHex)) {
+            log('chain poll: red distinta detectada', { previous: state.chainIdHex, current: currentHex });
+            state.chainId = null;
+            state.chainIdHex = currentHex;
+            state.networkName = null;
+            state.environment = null;
+            saveSession(coreConfig.network, state.address, state.chainIdHex, state.networkName);
+            syncDriveWallet();
+            if (_onStateChange) _onStateChange(getState());
+            emit(coreConfig.callbacks.onChainChanged, state.chainIdHex);
+          }
+        }).catch(function () {});
+      }, CHAIN_POLL_MS);
     }
 
     function getState() {
@@ -337,8 +382,104 @@
         chainIdHex: state.chainIdHex,
         networkName: state.networkName,
         environment: state.environment,
-        provider: state.provider
+        provider: state.provider,
+        tokenBalances: state.tokenBalances
       };
+    }
+
+    function padAddress(address) {
+      var hex = (address || '').replace(/^0x/i, '').toLowerCase();
+      if (hex.length > 64) hex = hex.slice(-64);
+      return '0x' + hex.padStart(64, '0');
+    }
+
+    function ethCall(provider, to, data) {
+      return provider.request({ method: 'eth_call', params: [{ to: to, data: data }, 'latest'] });
+    }
+
+    function parseUint256Hex(hex) {
+      if (!hex || typeof hex !== 'string') return null;
+      var h = hex.replace(/^0x/i, '');
+      if (h.length > 64) h = h.slice(-64);
+      return parseInt(h, 16);
+    }
+
+    function fetchTokenInfo(provider, contractAddress, userAddress) {
+      var to = contractAddress;
+      return Promise.all([
+        ethCall(provider, to, ERC20.name),
+        ethCall(provider, to, ERC20.symbol),
+        ethCall(provider, to, ERC20.decimals),
+        ethCall(provider, to, ERC20.balanceOf + padAddress(userAddress).slice(2))
+      ]).then(function (results) {
+        var nameHex = results[0];
+        var symbolHex = results[1];
+        var decimalsHex = results[2];
+        var balanceRaw = parseUint256Hex(results[3]);
+        var decimals = 18;
+        if (decimalsHex) {
+          var d = parseUint256Hex(decimalsHex);
+          if (d != null && !isNaN(d)) decimals = d;
+        }
+        var name = '';
+        var symbol = '';
+        try {
+          if (nameHex && nameHex.length > 2) name = decodeAbiString(nameHex);
+          if (symbolHex && symbolHex.length > 2) symbol = decodeAbiString(symbolHex);
+        } catch (e) {}
+        var balance = balanceRaw != null && !isNaN(balanceRaw) ? balanceRaw / Math.pow(10, decimals) : 0;
+        return { address: contractAddress, name: name || 'Token', symbol: symbol || '?', decimals: decimals, balanceRaw: balanceRaw, balance: balance };
+      });
+    }
+
+    function decodeAbiString(hex) {
+      if (!hex || typeof hex !== 'string') return '';
+      var h = hex.replace(/^0x/i, '');
+      if (h.length === 64) {
+        return decodeBytes32Hex(h);
+      }
+      if (h.length < 130) return '';
+      var offset = parseInt(h.slice(0, 64), 16);
+      if (isNaN(offset)) return '';
+      var lenStart = offset * 2;
+      var len = parseInt(h.slice(lenStart, lenStart + 64), 16);
+      if (isNaN(len) || len < 0 || len > 1024) return '';
+      var strStart = lenStart + 64;
+      var slice = h.slice(strStart, strStart + len * 2);
+      var str = '';
+      for (var i = 0; i < slice.length; i += 2) str += String.fromCharCode(parseInt(slice.slice(i, i + 2), 16));
+      return str.replace(/\0+$/, '');
+    }
+
+    function decodeBytes32Hex(h) {
+      if (!h || h.length < 64) return '';
+      var str = '';
+      for (var i = 0; i < 64; i += 2) {
+        var code = parseInt(h.slice(i, i + 2), 16);
+        if (code === 0) break;
+        if (code < 32 || code > 126) continue;
+        str += String.fromCharCode(code);
+      }
+      return str;
+    }
+
+    function refreshTokenBalances(coreConfig) {
+      var contracts = coreConfig && coreConfig.tokenContracts;
+      if (!state.provider || !state.address || !contracts || contracts.length === 0) {
+        state.tokenBalances = [];
+        return Promise.resolve();
+      }
+      var promises = contracts.map(function (addr) {
+        return fetchTokenInfo(state.provider, addr, state.address).catch(function (err) {
+          log('token fetch failed', { contract: addr, message: err && err.message });
+          return null;
+        });
+      });
+      return Promise.all(promises).then(function (arr) {
+        state.tokenBalances = arr.filter(Boolean);
+        syncDriveWallet();
+        if (_onStateChange) _onStateChange(getState());
+      });
     }
 
     function init(options) {
@@ -452,82 +593,104 @@
 
       function ensureChainThenSetState(account) {
         var CHAIN_CHANGED_TIMEOUT_MS = 5000;
-        return provider.request({ method: 'eth_chainId' }).then(function (actualId) {
-          var actualHex = chainIdToHex(actualId);
-          log('eth_chainId after requestAccounts', { current: actualHex, target: chainIdHex });
-          if (chainIdHexEqual(actualHex, chainIdHex)) {
-            log('Already on target chain', { chainIdHex: chainIdHex });
-            setStateFromAccounts(account);
-            return;
+        var FALLBACK_ALREADY_ON_CHAIN_MS = 600;
+        // No confiar en eth_chainId antes del switch: en SES puede estar desincronizado y
+        // haría early-return sin llamar a wallet_switchEthereumChain (MetaMask/EIP-3326).
+        // Siempre forzamos switch; confirmación real vía chainChanged (o fallback 600ms).
+        return new Promise(function (resolve, reject) {
+          var settled = false;
+          var timeoutId = null;
+          var fallbackId = null;
+          function settle() {
+            if (settled) return;
+            settled = true;
+            try { provider.removeListener('chainChanged', onChainChanged); } catch (e) {}
+            if (timeoutId) clearTimeout(timeoutId);
+            if (fallbackId) clearTimeout(fallbackId);
           }
-          // MetaMask docs: "Listen to the chainChanged event to detect a user's network change."
-          // Only mark connected when we receive chainChanged with target chainId (real UI state).
-          return new Promise(function (resolve, reject) {
-            var settled = false;
-            function settle() {
-              if (settled) return;
-              settled = true;
-              try { provider.removeListener('chainChanged', onChainChanged); } catch (e) {}
-              if (timeoutId) clearTimeout(timeoutId);
-            }
-            var timeoutId = setTimeout(function () {
+          timeoutId = setTimeout(function () {
+            settle();
+            var err = new Error('No se recibió confirmación de cambio de red (evento chainChanged). Cambia la red manualmente en MetaMask.');
+            warn(err.message, null);
+            if (_onStateChange) _onStateChange(getState());
+            emit(coreConfig.callbacks.onError, err);
+            reject(err);
+          }, CHAIN_CHANGED_TIMEOUT_MS);
+          function onChainChanged(newChainId) {
+            var newHex = chainIdToHex(newChainId);
+            if (chainIdHexEqual(newHex, chainIdHex)) {
+              log('chainChanged (EIP-1193): red cambiada realmente en MetaMask', { chainId: newHex });
               settle();
-              var err = new Error('No se recibió confirmación de cambio de red (evento chainChanged). Cambia la red manualmente en MetaMask o prueba sin extensiones que inyecten SES.');
-              warn(err.message, null);
-              if (_onStateChange) _onStateChange(getState());
-              emit(coreConfig.callbacks.onError, err);
-              reject(err);
-            }, CHAIN_CHANGED_TIMEOUT_MS);
-            function onChainChanged(newChainId) {
-              var newHex = chainIdToHex(newChainId);
-              if (chainIdHexEqual(newHex, chainIdHex)) {
-                log('chainChanged (EIP-1193): red cambiada realmente en MetaMask', { chainId: newHex });
-                settle();
-                setStateFromAccounts(account);
-                resolve();
-              }
+              setStateFromAccounts(account);
+              resolve();
             }
-            provider.on('chainChanged', onChainChanged);
-            info('Requesting wallet to switch chain (popup expected) — confirmación vía evento chainChanged');
-            log('calling wallet_switchEthereumChain (EIP-3326)', { chainId: chainIdHex });
-            function doSwitch() {
-              return provider.request({
-                method: 'wallet_switchEthereumChain',
-                params: [{ chainId: chainIdHex }]
-              });
+          }
+          provider.on('chainChanged', onChainChanged);
+          info('Forzando wallet_switchEthereumChain (popup si es necesario)');
+          log('calling wallet_switchEthereumChain (EIP-3326)', { chainId: chainIdHex });
+          function doSwitch() {
+            return provider.request({
+              method: 'wallet_switchEthereumChain',
+              params: [{ chainId: chainIdHex }]
+            });
+          }
+          function doAddThenSwitch() {
+            if (!chainParams.rpcUrls || chainParams.rpcUrls.length === 0) {
+              settle();
+              var errMsg = 'Network has no RPC URL; cannot add chain (EIP-3085 requires rpcUrls).';
+              warn(errMsg, null);
+              emit(coreConfig.callbacks.onError, new Error(errMsg));
+              reject(new Error(errMsg));
+              return Promise.reject(new Error(errMsg));
             }
-            function doAddThenSwitch() {
-              if (!chainParams.rpcUrls || chainParams.rpcUrls.length === 0) {
-                settle();
-                var errMsg = 'Network has no RPC URL; cannot add chain (EIP-3085 requires rpcUrls).';
-                warn(errMsg, null);
-                emit(coreConfig.callbacks.onError, new Error(errMsg));
-                reject(new Error(errMsg));
-                return;
-              }
-              info('Chain not in wallet; requesting add then switch — chainId: ' + chainIdHex);
-              return provider.request({
-                method: 'wallet_addEthereumChain',
-                params: [{
-                  chainId: chainIdHex,
-                  chainName: chainParams.chainName,
-                  nativeCurrency: chainParams.nativeCurrency,
-                  rpcUrls: chainParams.rpcUrls,
-                  blockExplorerUrls: chainParams.blockExplorerUrls
-                }]
-              }).then(doSwitch);
-            }
-            doSwitch().catch(function (switchErr) {
+            info('Chain not in wallet; requesting add then switch — chainId: ' + chainIdHex);
+            return provider.request({
+              method: 'wallet_addEthereumChain',
+              params: [{
+                chainId: chainIdHex,
+                chainName: chainParams.chainName,
+                nativeCurrency: chainParams.nativeCurrency,
+                rpcUrls: chainParams.rpcUrls,
+                blockExplorerUrls: chainParams.blockExplorerUrls
+              }]
+            }).then(doSwitch);
+          }
+          function scheduleFallbackAlreadyOnChain() {
+            if (settled) return;
+            fallbackId = setTimeout(function () {
+              if (settled) return;
+              provider.request({ method: 'eth_chainId' }).then(function (id) {
+                if (settled) return;
+                if (chainIdHexEqual(chainIdToHex(id), chainIdHex)) {
+                  log('Fallback: eth_chainId coincide tras switch (ya en red)');
+                  settle();
+                  setStateFromAccounts(account);
+                  resolve();
+                }
+              }).catch(function () {});
+            }, FALLBACK_ALREADY_ON_CHAIN_MS);
+          }
+          doSwitch()
+            .then(function () {
+              if (settled) return;
+              scheduleFallbackAlreadyOnChain();
+            })
+            .catch(function (switchErr) {
               var code = switchErr && (switchErr.code || (switchErr.error && switchErr.error.code));
               log('wallet_switchEthereumChain result', { code: code, message: switchErr && switchErr.message });
               if (code === 4902) {
-                doAddThenSwitch().catch(function (addErr) {
-                  settle();
-                  warn('add/switch chain failed', { code: addErr && addErr.code, message: addErr && addErr.message });
-                  if (_onStateChange) _onStateChange(getState());
-                  emit(coreConfig.callbacks.onError, addErr);
-                  reject(addErr);
-                });
+                doAddThenSwitch()
+                  .then(function () {
+                    if (settled) return;
+                    scheduleFallbackAlreadyOnChain();
+                  })
+                  .catch(function (addErr) {
+                    settle();
+                    warn('add/switch chain failed', { code: addErr && addErr.code, message: addErr && addErr.message });
+                    if (_onStateChange) _onStateChange(getState());
+                    emit(coreConfig.callbacks.onError, addErr);
+                    reject(addErr);
+                  });
               } else {
                 settle();
                 warn('wallet_switchEthereumChain error', { code: code, message: switchErr && switchErr.message });
@@ -536,7 +699,6 @@
                 reject(switchErr);
               }
             });
-          });
         });
       }
 
@@ -562,7 +724,11 @@
     }
 
     function disconnect(coreConfig) {
-      removeProviderEvents();
+      try {
+        removeProviderEvents();
+      } catch (e) {
+        if (DEBUG) log('disconnect: removeProviderEvents error', e);
+      }
       state.connected = false;
       state.address = null;
       state.chainId = null;
@@ -570,6 +736,7 @@
       state.networkName = null;
       state.environment = null;
       state.provider = null;
+      state.tokenBalances = [];
       state._accountsHandler = null;
       state._chainHandler = null;
       clearSession();
@@ -586,6 +753,7 @@
       getProvider: getProvider,
       getSession: getSession,
       clearSession: clearSession,
+      refreshTokenBalances: refreshTokenBalances,
       init: init,
       start: start,
       connect: connect,
@@ -635,6 +803,11 @@
       '.' + PREFIX + 'net{ font-size: 0.75rem; font-weight: 500; padding: 0.15em 0.45em; border-radius: 6px; flex-shrink: 0; }' +
       '.' + PREFIX + 'disconnect{ font-size: 0.8rem; cursor: pointer; text-decoration: none; border-radius: 4px; padding: 0.2em 0.35em; margin-left: auto; flex-shrink: 0; transition: opacity 0.15s ease; }' +
       '.' + PREFIX + 'disconnect:hover{ opacity: 0.85; }' +
+      '.' + PREFIX + 'tokens{ margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(0,0,0,0.08); font-size: 0.8rem; }' +
+      '.' + PREFIX + 'tokens[data-theme="dark"]{ border-top-color: rgba(255,255,255,0.12); }' +
+      '.' + PREFIX + 'token-row{ display: flex; justify-content: space-between; gap: 0.5rem; padding: 0.2em 0; }' +
+      '.' + PREFIX + 'token-symbol{ font-weight: 600; }' +
+      '.' + PREFIX + 'token-balance{ font-family: ui-monospace, monospace; }' +
       '/* theme: base */' +
       '.' + PREFIX + 'root[data-theme="base"] .' + PREFIX + 'message{ color: #374151; }' +
       '.' + PREFIX + 'root[data-theme="base"] .' + PREFIX + 'button{ background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%); color: #fff; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35); }' +
@@ -718,6 +891,14 @@
     container.appendChild(root);
   }
 
+  function formatTokenBalance(balance) {
+    if (balance == null || isNaN(balance)) return '0';
+    if (balance >= 1e9) return balance.toFixed(0);
+    if (balance >= 1) return balance.toFixed(4);
+    if (balance >= 1e-4) return balance.toFixed(6);
+    return balance.toExponential(2);
+  }
+
   function renderConnected(container, uiConfig, chainParams, stateSnapshot, onDisconnect) {
     ensureStyles();
     var addr = truncateAddress(stateSnapshot.address);
@@ -734,6 +915,23 @@
       '<span class="' + PREFIX + 'net" title="' + netTitle + '">' + escapeAttr(netShort) + '</span>' +
       '<a class="' + PREFIX + 'disconnect" href="#" role="button">Disconnect</a>' +
       '</div>';
+    var tokens = stateSnapshot.tokenBalances;
+    if (tokens && tokens.length > 0) {
+      var tokensDiv = document.createElement('div');
+      tokensDiv.className = PREFIX + 'tokens';
+      if (uiConfig.theme === 'dark') tokensDiv.setAttribute('data-theme', 'dark');
+      tokensDiv.setAttribute('aria-label', 'Saldos de tokens');
+      for (var i = 0; i < tokens.length; i++) {
+        var t = tokens[i];
+        var symbolText = (t.symbol || t.name || 'Token').trim() || 'Token';
+        var balanceText = formatTokenBalance(t.balance);
+        var row = document.createElement('div');
+        row.className = PREFIX + 'token-row';
+        row.innerHTML = '<span class="' + PREFIX + 'token-symbol" title="Token">' + escapeAttr(symbolText) + '</span><span class="' + PREFIX + 'token-balance" title="Balance">' + escapeAttr(balanceText) + '</span>';
+        tokensDiv.appendChild(row);
+      }
+      root.appendChild(tokensDiv);
+    }
     var disconnectLink = root.querySelector('.' + PREFIX + 'disconnect');
     disconnectLink.addEventListener('click', function (e) {
       e.preventDefault();
@@ -755,15 +953,29 @@
     }
     info('Widget init — network: ' + config.network + ' (set window.DriveWalletWidget.debug = true for more logs)');
     log('run()', { network: config.network, hasContainer: true });
-    var coreConfig = { network: config.network, callbacks: config.callbacks };
+    var coreConfig = { network: config.network, callbacks: config.callbacks, tokenContracts: config.tokenContracts };
     var chainParamsRef = { current: null };
 
     core.init({
       onStateChange: function (stateSnapshot) {
-        if (!chainParamsRef.current) return;
+        if (stateSnapshot.connected && !chainParamsRef.current) return;
+        if (stateSnapshot.connected && (config.tokenContracts || []).length > 0) {
+          core.refreshTokenBalances(coreConfig);
+        }
         forEachContainer(config, function (el, uiConfig) {
           if (stateSnapshot.connected) {
-            renderConnected(el, uiConfig, chainParamsRef.current, stateSnapshot, function () { core.disconnect(coreConfig); });
+            renderConnected(el, uiConfig, chainParamsRef.current, stateSnapshot, function onDisconnectClick() {
+              try {
+                core.disconnect(coreConfig);
+              } catch (err) {
+                if (console && console.warn) console.warn('[DriveWallet] disconnect error', err);
+              }
+              if (chainParamsRef.current) {
+                forEachContainer(config, function (el2, uiConfig2) {
+                  renderReady(el2, uiConfig2, chainParamsRef.current, function () { core.connect(chainParamsRef.current, coreConfig); });
+                });
+              }
+            });
           } else {
             renderReady(el, uiConfig, chainParamsRef.current, function () { core.connect(chainParamsRef.current, coreConfig); });
           }
@@ -789,6 +1001,9 @@
         if (!provider) {
           forEachContainer(config, function (el, uiConfig) { renderNoWallet(el, uiConfig); });
           return;
+        }
+        if (stateSnapshot.connected && (config.tokenContracts || []).length > 0) {
+          core.refreshTokenBalances(coreConfig);
         }
         forEachContainer(config, function (el, uiConfig) {
           if (stateSnapshot.connected) {
