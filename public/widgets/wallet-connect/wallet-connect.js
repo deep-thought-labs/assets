@@ -171,11 +171,9 @@
       provider: null,
       _accountsHandler: null,
       _chainHandler: null,
-      _chainPollId: null,
       tokenBalances: []
     };
     var _onStateChange = null;
-    var CHAIN_POLL_MS = 3000;
     var ERC20 = { name: '0x06fdde03', symbol: '0x95d89b41', decimals: '0x313ce567', balanceOf: '0x70a08231' };
 
     function saveSession(network, address, chainIdHex, networkName) {
@@ -289,10 +287,6 @@
     }
 
     function removeProviderEvents() {
-      if (state._chainPollId) {
-        clearInterval(state._chainPollId);
-        state._chainPollId = null;
-      }
       var provider = state.provider;
       if (!provider) return;
       if (state._accountsHandler) {
@@ -349,29 +343,13 @@
         saveSession(coreConfig.network, state.address, state.chainIdHex, state.networkName);
         syncDriveWallet();
         if (_onStateChange) _onStateChange(getState());
+        if ((coreConfig.tokenContracts || []).length > 0) {
+          refreshTokenBalances(coreConfig);
+        }
         emit(coreConfig.callbacks.onChainChanged, state.chainIdHex);
       };
       provider.on('accountsChanged', state._accountsHandler);
       provider.on('chainChanged', state._chainHandler);
-      // Fallback: si chainChanged no llega (p. ej. SES), detectar cambio de red por polling
-      if (state._chainPollId) clearInterval(state._chainPollId);
-      state._chainPollId = setInterval(function () {
-        if (!state.provider || !state.connected) return;
-        state.provider.request({ method: 'eth_chainId' }).then(function (id) {
-          var currentHex = chainIdToHex(id);
-          if (currentHex != null && !chainIdHexEqual(currentHex, state.chainIdHex)) {
-            log('chain poll: red distinta detectada', { previous: state.chainIdHex, current: currentHex });
-            state.chainId = null;
-            state.chainIdHex = currentHex;
-            state.networkName = null;
-            state.environment = null;
-            saveSession(coreConfig.network, state.address, state.chainIdHex, state.networkName);
-            syncDriveWallet();
-            if (_onStateChange) _onStateChange(getState());
-            emit(coreConfig.callbacks.onChainChanged, state.chainIdHex);
-          }
-        }).catch(function () {});
-      }, CHAIN_POLL_MS);
     }
 
     function getState() {
@@ -591,113 +569,58 @@
         info('Connected. If your wallet still shows a different network, switch it manually in MetaMask, or embed this widget in an iframe that does not run SES/lockdown.');
       }
 
+      function doSwitch() {
+        return provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: chainIdHex }] });
+      }
+      function doAddThenSwitch() {
+        if (!chainParams.rpcUrls || chainParams.rpcUrls.length === 0) {
+          return Promise.reject(new Error('Network has no RPC URL; cannot add chain (EIP-3085 requires rpcUrls).'));
+        }
+        info('Chain not in wallet; requesting add then switch — chainId: ' + chainIdHex);
+        return provider.request({
+          method: 'wallet_addEthereumChain',
+          params: [{
+            chainId: chainIdHex,
+            chainName: chainParams.chainName,
+            nativeCurrency: chainParams.nativeCurrency,
+            rpcUrls: chainParams.rpcUrls,
+            blockExplorerUrls: chainParams.blockExplorerUrls
+          }]
+        }).then(doSwitch);
+      }
       function ensureChainThenSetState(account) {
-        var CHAIN_CHANGED_TIMEOUT_MS = 5000;
-        var FALLBACK_ALREADY_ON_CHAIN_MS = 600;
-        // No confiar en eth_chainId antes del switch: en SES puede estar desincronizado y
-        // haría early-return sin llamar a wallet_switchEthereumChain (MetaMask/EIP-3326).
-        // Siempre forzamos switch; confirmación real vía chainChanged (o fallback 600ms).
-        return new Promise(function (resolve, reject) {
-          var settled = false;
-          var timeoutId = null;
-          var fallbackId = null;
-          function settle() {
-            if (settled) return;
-            settled = true;
-            try { provider.removeListener('chainChanged', onChainChanged); } catch (e) {}
-            if (timeoutId) clearTimeout(timeoutId);
-            if (fallbackId) clearTimeout(fallbackId);
+        return provider.request({ method: 'eth_chainId' }).then(function (currentId) {
+          var currentHex = chainIdToHex(currentId);
+          if (chainIdHexEqual(currentHex, chainIdHex)) {
+            log('Already on target chain', { chainId: chainIdHex });
+            setStateFromAccounts(account);
+            return;
           }
-          timeoutId = setTimeout(function () {
-            settle();
-            var err = new Error('No se recibió confirmación de cambio de red (evento chainChanged). Cambia la red manualmente en MetaMask.');
-            warn(err.message, null);
-            if (_onStateChange) _onStateChange(getState());
-            emit(coreConfig.callbacks.onError, err);
-            reject(err);
-          }, CHAIN_CHANGED_TIMEOUT_MS);
-          function onChainChanged(newChainId) {
-            var newHex = chainIdToHex(newChainId);
-            if (chainIdHexEqual(newHex, chainIdHex)) {
-              log('chainChanged (EIP-1193): red cambiada realmente en MetaMask', { chainId: newHex });
-              settle();
-              setStateFromAccounts(account);
-              resolve();
-            }
-          }
-          provider.on('chainChanged', onChainChanged);
-          info('Forzando wallet_switchEthereumChain (popup si es necesario)');
           log('calling wallet_switchEthereumChain (EIP-3326)', { chainId: chainIdHex });
-          function doSwitch() {
-            return provider.request({
-              method: 'wallet_switchEthereumChain',
-              params: [{ chainId: chainIdHex }]
-            });
-          }
-          function doAddThenSwitch() {
-            if (!chainParams.rpcUrls || chainParams.rpcUrls.length === 0) {
-              settle();
-              var errMsg = 'Network has no RPC URL; cannot add chain (EIP-3085 requires rpcUrls).';
-              warn(errMsg, null);
-              emit(coreConfig.callbacks.onError, new Error(errMsg));
-              reject(new Error(errMsg));
-              return Promise.reject(new Error(errMsg));
-            }
-            info('Chain not in wallet; requesting add then switch — chainId: ' + chainIdHex);
-            return provider.request({
-              method: 'wallet_addEthereumChain',
-              params: [{
-                chainId: chainIdHex,
-                chainName: chainParams.chainName,
-                nativeCurrency: chainParams.nativeCurrency,
-                rpcUrls: chainParams.rpcUrls,
-                blockExplorerUrls: chainParams.blockExplorerUrls
-              }]
-            }).then(doSwitch);
-          }
-          function scheduleFallbackAlreadyOnChain() {
-            if (settled) return;
-            fallbackId = setTimeout(function () {
-              if (settled) return;
-              provider.request({ method: 'eth_chainId' }).then(function (id) {
-                if (settled) return;
-                if (chainIdHexEqual(chainIdToHex(id), chainIdHex)) {
-                  log('Fallback: eth_chainId coincide tras switch (ya en red)');
-                  settle();
-                  setStateFromAccounts(account);
-                  resolve();
-                }
-              }).catch(function () {});
-            }, FALLBACK_ALREADY_ON_CHAIN_MS);
-          }
-          doSwitch()
-            .then(function () {
-              if (settled) return;
-              scheduleFallbackAlreadyOnChain();
+          return doSwitch()
+            .then(function () { return provider.request({ method: 'eth_chainId' }); })
+            .then(function (id) {
+              if (chainIdHexEqual(chainIdToHex(id), chainIdHex)) {
+                setStateFromAccounts(account);
+              } else {
+                setStateFromAccounts(account);
+              }
             })
             .catch(function (switchErr) {
               var code = switchErr && (switchErr.code || (switchErr.error && switchErr.error.code));
-              log('wallet_switchEthereumChain result', { code: code, message: switchErr && switchErr.message });
               if (code === 4902) {
-                doAddThenSwitch()
-                  .then(function () {
-                    if (settled) return;
-                    scheduleFallbackAlreadyOnChain();
-                  })
+                return doAddThenSwitch()
+                  .then(function () { return provider.request({ method: 'eth_chainId' }); })
+                  .then(function () { setStateFromAccounts(account); })
                   .catch(function (addErr) {
-                    settle();
                     warn('add/switch chain failed', { code: addErr && addErr.code, message: addErr && addErr.message });
-                    if (_onStateChange) _onStateChange(getState());
                     emit(coreConfig.callbacks.onError, addErr);
-                    reject(addErr);
+                    throw addErr;
                   });
-              } else {
-                settle();
-                warn('wallet_switchEthereumChain error', { code: code, message: switchErr && switchErr.message });
-                if (_onStateChange) _onStateChange(getState());
-                emit(coreConfig.callbacks.onError, switchErr);
-                reject(switchErr);
               }
+              warn('wallet_switchEthereumChain error', { code: code, message: switchErr && switchErr.message });
+              emit(coreConfig.callbacks.onError, switchErr);
+              throw switchErr;
             });
         });
       }
