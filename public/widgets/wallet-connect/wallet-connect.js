@@ -558,6 +558,9 @@
               setupProviderEvents(chainParams, coreConfig);
               if (_onStateChange) _onStateChange(getState());
               refreshNativeBalance();
+              if ((coreConfig.tokenContracts || []).length > 0) {
+                refreshTokenBalances(coreConfig);
+              }
               log('start: session restored', { address: state.address ? state.address.slice(0, 10) + '...' : '' });
             }
           } else {
@@ -606,6 +609,9 @@
         setupProviderEvents(chainParams, coreConfig);
         if (_onStateChange) _onStateChange(getState());
         refreshNativeBalance();
+        if ((coreConfig.tokenContracts || []).length > 0) {
+          refreshTokenBalances(coreConfig);
+        }
         emit(coreConfig.callbacks.onConnect, { address: state.address, chainId: state.chainId, chainIdHex: state.chainIdHex, networkName: state.networkName, environment: state.environment });
         info('Connected. If your wallet still shows a different network, switch it manually in MetaMask, or embed this widget in an iframe that does not run SES/lockdown.');
       }
