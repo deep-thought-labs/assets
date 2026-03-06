@@ -104,6 +104,13 @@ The widget is structured in three **internal** layers. Only the contract above i
 
 **Stability:** We can add themes, change styles, or add new UI options (e.g. `data-button-label`) without changing core. Core never reads theme or DOM.
 
+**TriggerView and PanelView (internal structure):** The UI layer is organised around two conceptual views, used by the Bridge depending on layout:
+
+- **TriggerView** (`renderTriggerInline`): The compact control the user clicks — a “Connect” button when disconnected (or “Connecting…” when in progress), or a pill (address + network) when connected. In **inline** layout this is not rendered as a separate node; the same container shows the full content (button or connected bar).
+- **PanelView** (`renderPanelContent`): The content shown in the widget — either “Connecting…”, the Connect button (ready), or the connected bar (address, network, Refresh, Disconnect, token balances). In **inline** layout this is the only view rendered; trigger and panel are effectively one block. In **dropdown** layout (future), the trigger is rendered separately and the panel is shown in a floating dropdown when open.
+
+In **inline** mode, the Bridge calls `renderPanelContent` only (which branches to `renderConnecting`, `renderReady`, or `renderConnected`). In dropdown mode, the Bridge would render the trigger and, when open, the panel content. See PLAN_EVOLUCION_WIDGET.md.
+
 ### 3.3 Bridge (orchestration)
 
 **Responsibility:** Glue between Core and UI; DOM discovery and config parsing.

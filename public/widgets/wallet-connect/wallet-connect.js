@@ -765,6 +765,7 @@
     style.textContent =
       '.' + PREFIX + 'root{ font-family: system-ui, -apple-system, sans-serif; font-size: 14px; line-height: 1.4; transition: opacity 0.15s ease; }' +
       '.' + PREFIX + 'message{ padding: 0.5rem 0; margin: 0; }' +
+      '.' + PREFIX + 'connecting{ font-style: italic; }' +
       '.' + PREFIX + 'button{ display: inline-flex; align-items: center; justify-content: center; padding: 0.6rem 1.25rem; cursor: pointer; font-size: 0.95rem; font-weight: 500; border: none; border-radius: 10px; transition: transform 0.1s ease, box-shadow 0.15s ease; }' +
       '.' + PREFIX + 'button:hover{ transform: translateY(-1px); }' +
       '.' + PREFIX + 'button:active{ transform: translateY(0); }' +
@@ -856,16 +857,41 @@
     container.appendChild(root);
   }
 
+  function renderConnecting(container, uiConfig) {
+    ensureStyles();
+    var root = document.createElement('div');
+    root.className = PREFIX + 'root';
+    root.setAttribute('aria-label', 'Connecting wallet');
+    setTheme(root, uiConfig.theme);
+    root.innerHTML = '<p class="' + PREFIX + 'message ' + PREFIX + 'connecting">Connecting\u2026</p>';
+    container.innerHTML = '';
+    container.appendChild(root);
+  }
+
   function renderReady(container, uiConfig, chainParams, onConnect) {
     ensureStyles();
     var btn = document.createElement('button');
     btn.type = 'button';
     btn.className = PREFIX + 'button';
+    btn.setAttribute('role', 'button');
+    btn.setAttribute('aria-label', uiConfig.buttonLabel || 'Connect wallet');
+    btn.setAttribute('tabindex', '0');
     btn.textContent = uiConfig.buttonLabel;
-    btn.addEventListener('click', function () { onConnect(); });
+    function doConnect() {
+      if (typeof onConnect === 'function') onConnect();
+    }
+    btn.addEventListener('click', function () { doConnect(); });
+    btn.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        doConnect();
+      }
+    });
     container.innerHTML = '';
     var root = document.createElement('div');
     root.className = PREFIX + 'root';
+    root.setAttribute('role', 'region');
+    root.setAttribute('aria-label', 'Wallet connection');
     setTheme(root, uiConfig.theme);
     root.appendChild(btn);
     container.appendChild(root);
@@ -887,15 +913,17 @@
     var netTitle = escapeAttr(stateSnapshot.networkName || stateSnapshot.chainIdHex || stateSnapshot.chainId || '');
     var root = document.createElement('div');
     root.className = PREFIX + 'root';
+    root.setAttribute('role', 'region');
+    root.setAttribute('aria-label', 'Wallet connected');
     setTheme(root, uiConfig.theme);
-    var refreshLink = typeof onRefresh === 'function' ? '<a class="' + PREFIX + 'refresh" href="#" role="button">Refresh</a>' : '';
+    var refreshLink = typeof onRefresh === 'function' ? '<a class="' + PREFIX + 'refresh" href="#" role="button" aria-label="Refresh balances" tabindex="0">Refresh</a>' : '';
     root.innerHTML =
       '<div class="' + PREFIX + 'connected">' +
       '<span class="' + PREFIX + 'connected-dot" aria-hidden="true"></span>' +
       '<span class="' + PREFIX + 'address" title="' + titleSafe + '">' + escapeAttr(addr) + '</span>' +
       '<span class="' + PREFIX + 'net" title="' + netTitle + '">' + escapeAttr(netShort) + '</span>' +
       refreshLink +
-      '<a class="' + PREFIX + 'disconnect" href="#" role="button">Disconnect</a>' +
+      '<a class="' + PREFIX + 'disconnect" href="#" role="button" aria-label="Disconnect" tabindex="0">Disconnect</a>' +
       '</div>';
     var native = stateSnapshot.nativeToken;
     var tokens = stateSnapshot.tokenBalances;
@@ -927,9 +955,18 @@
       root.appendChild(tokensDiv);
     }
     var disconnectLink = root.querySelector('.' + PREFIX + 'disconnect');
+    function doDisconnect() {
+      if (typeof onDisconnect === 'function') onDisconnect();
+    }
     disconnectLink.addEventListener('click', function (e) {
       e.preventDefault();
-      onDisconnect();
+      doDisconnect();
+    });
+    disconnectLink.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        doDisconnect();
+      }
     });
     if (typeof onRefresh === 'function') {
       var refreshLinkEl = root.querySelector('.' + PREFIX + 'refresh');
@@ -938,7 +975,56 @@
           e.preventDefault();
           onRefresh();
         });
+        refreshLinkEl.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onRefresh();
+          }
+        });
       }
+    }
+    container.innerHTML = '';
+    container.appendChild(root);
+  }
+
+  // Panel content: Connecting, Ready (button), or Connected (bar). Used by Bridge for inline layout; later also for dropdown panel.
+  function renderPanelContent(container, stateSnapshot, uiConfig, chainParams, onConnect, onDisconnect, onRefresh, isConnecting) {
+    if (isConnecting) {
+      renderConnecting(container, uiConfig);
+      return;
+    }
+    if (stateSnapshot && stateSnapshot.connected) {
+      renderConnected(container, uiConfig, chainParams, stateSnapshot, onDisconnect, onRefresh);
+      return;
+    }
+    renderReady(container, uiConfig, chainParams, onConnect);
+  }
+
+  // Trigger view (button when disconnected, pill when connected). For inline layout not used separately; for dropdown (Fase 2) will be the clickable trigger.
+  function renderTriggerInline(container, stateSnapshot, uiConfig, chainParams, isConnecting, onTriggerClick) {
+    ensureStyles();
+    var root = document.createElement('div');
+    root.className = PREFIX + 'root ' + PREFIX + 'trigger';
+    setTheme(root, uiConfig.theme);
+    if (isConnecting || !stateSnapshot || !stateSnapshot.connected) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = PREFIX + 'button';
+      btn.setAttribute('role', 'button');
+      btn.setAttribute('aria-label', uiConfig.buttonLabel || 'Connect wallet');
+      btn.textContent = isConnecting ? 'Connecting\u2026' : uiConfig.buttonLabel;
+      btn.disabled = !!isConnecting;
+      if (typeof onTriggerClick === 'function') btn.addEventListener('click', onTriggerClick);
+      root.appendChild(btn);
+    } else {
+      var pill = document.createElement('button');
+      pill.type = 'button';
+      pill.className = PREFIX + 'connected';
+      pill.setAttribute('role', 'button');
+      pill.setAttribute('aria-label', 'Wallet connected: ' + truncateAddress(stateSnapshot.address));
+      pill.textContent = truncateAddress(stateSnapshot.address) + ' \u2022 ' + shortNetworkLabel(uiConfig.network, stateSnapshot.networkName);
+      if (typeof onTriggerClick === 'function') pill.addEventListener('click', onTriggerClick);
+      root.appendChild(pill);
     }
     container.innerHTML = '';
     container.appendChild(root);
@@ -958,6 +1044,7 @@
     log('run()', { network: config.network, hasContainer: true });
     var coreConfig = { network: config.network, callbacks: config.callbacks, tokenContracts: config.tokenContracts };
     var chainParamsRef = { current: null };
+    var isConnectingRef = { current: false };
 
     function doRefreshBalances() {
       core.refreshNativeBalance();
@@ -965,6 +1052,47 @@
         core.refreshTokenBalances(coreConfig);
       }
     }
+
+    function onDisconnectClick() {
+      try {
+        core.disconnect(coreConfig);
+      } catch (err) {
+        if (console && console.warn) console.warn('[DriveWallet] disconnect error', err);
+      }
+    }
+
+    function renderAll(stateSnapshot) {
+      forEachContainer(config, function (el, uiConfig) {
+        renderPanelContent(
+          el,
+          stateSnapshot,
+          uiConfig,
+          chainParamsRef.current,
+          connectWrapper,
+          onDisconnectClick,
+          doRefreshBalances,
+          isConnectingRef.current
+        );
+      });
+    }
+
+    function connectWrapper() {
+      if (isConnectingRef.current) return;
+      var cp = chainParamsRef.current;
+      if (!cp) return;
+      isConnectingRef.current = true;
+      renderAll(core.getState());
+      core.connect(cp, coreConfig)
+        .then(function () {
+          isConnectingRef.current = false;
+          renderAll(core.getState());
+        })
+        .catch(function () {
+          isConnectingRef.current = false;
+          renderAll(core.getState());
+        });
+    }
+
     try {
       window.DriveWalletWidget = window.DriveWalletWidget || {};
       window.DriveWalletWidget.refreshBalances = doRefreshBalances;
@@ -973,24 +1101,7 @@
     core.init({
       onStateChange: function (stateSnapshot) {
         if (stateSnapshot.connected && !chainParamsRef.current) return;
-        forEachContainer(config, function (el, uiConfig) {
-          if (stateSnapshot.connected) {
-            renderConnected(el, uiConfig, chainParamsRef.current, stateSnapshot, function onDisconnectClick() {
-              try {
-                core.disconnect(coreConfig);
-              } catch (err) {
-                if (console && console.warn) console.warn('[DriveWallet] disconnect error', err);
-              }
-              if (chainParamsRef.current) {
-                forEachContainer(config, function (el2, uiConfig2) {
-                  renderReady(el2, uiConfig2, chainParamsRef.current, function () { core.connect(chainParamsRef.current, coreConfig); });
-                });
-              }
-            }, doRefreshBalances);
-          } else {
-            renderReady(el, uiConfig, chainParamsRef.current, function () { core.connect(chainParamsRef.current, coreConfig); });
-          }
-        });
+        renderAll(stateSnapshot);
       }
     });
 
@@ -1008,18 +1119,13 @@
     core.start(coreConfig, {
       onReady: function (stateSnapshot, chainParams) {
         chainParamsRef.current = chainParams;
+        isConnectingRef.current = false;
         if (config.callbacks.onReady) config.callbacks.onReady();
         if (!provider) {
           forEachContainer(config, function (el, uiConfig) { renderNoWallet(el, uiConfig); });
           return;
         }
-        forEachContainer(config, function (el, uiConfig) {
-          if (stateSnapshot.connected) {
-            renderConnected(el, uiConfig, chainParams, stateSnapshot, function () { core.disconnect(coreConfig); }, doRefreshBalances);
-          } else {
-            renderReady(el, uiConfig, chainParams, function () { core.connect(chainParams, coreConfig); });
-          }
-        });
+        renderAll(stateSnapshot);
       },
       onError: function (err) {
         handleRunError(err, networkPath, config, provider);
@@ -1041,7 +1147,8 @@
         .then(function (data) {
           var chainParams = core.buildAddChainParams(data);
           if (chainParams && provider) {
-            forEachContainer(config, function (el, uiConfig) { renderReady(el, uiConfig, chainParams, function () { core.connect(chainParams, { network: config.network, callbacks: config.callbacks }); }); });
+            chainParamsRef.current = chainParams;
+            renderAll(core.getState());
           } else if (!provider) {
             forEachContainer(config, function (el, uiConfig) { renderNoWallet(el, uiConfig); });
           } else {

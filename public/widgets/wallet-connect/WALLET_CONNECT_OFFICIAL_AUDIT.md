@@ -2,6 +2,21 @@
 
 Este documento mapea cada parte del widget contra las EIP y la documentación de MetaMask, para garantizar que la lógica sigue al pie de la letra las especificaciones.
 
+## Referencia de comportamiento (Fase Core)
+
+**Referencia de verdad para la lógica del Core:** Comportamiento observable de la interfaz web de **Uniswap** (connect, disconnect, switch chain, add chain, refresh, sesión) + **EIP-1193, EIP-1102, EIP-3326, EIP-3085, EIP-6963** + documentación oficial de **MetaMask** (add/switch network, EIP-6963). Donde nuestro Core difiera de esta referencia, se alinea con ella (no se conserva la implementación actual por inercia).
+
+| Área | Referencia (Uniswap + EIPs + MetaMask) | Nuestro widget | Estado |
+|------|----------------------------------------|----------------|--------|
+| Connect | requestAccounts primero; luego switch/add chain; confirmación por chainChanged o fallback controlado; no confiar en eth_chainId previo | Igual (ver §1 y §5) | OK |
+| Disconnect | Limpiar estado local; no llamar a método “disconnect” en el provider | Igual | OK |
+| Cambio de red (chainChanged) | Listener actualiza estado; opción de “volver a nuestra red” con mismo flujo que connect | Igual | OK |
+| Refresh | Tras connect/accountsChanged/chainChanged; refreshBalances() manual | Igual | OK |
+| Sesión | Restaurar solo si misma red + cuentas + chainId; no popup en load | Igual (ver §6) | OK |
+| Provider | EIP-6963 + fallback a window.ethereum | Igual (ver §1) | OK |
+
+---
+
 ## Referencias oficiales
 
 | Especificación | URL | Uso en el widget |
