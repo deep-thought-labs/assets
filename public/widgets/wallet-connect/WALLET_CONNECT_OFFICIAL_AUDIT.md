@@ -42,8 +42,8 @@ Este documento mapea cada parte del widget contra las EIP y la documentación de
   - El widget escucha `eip6963:announceProvider` y emite `eip6963:requestProvider` al cargar (EIP-6963). El provider anunciado es un objeto EIP-1193 "limpio" de la extensión, lo que evita sobrescritura, race conditions y problemas con SES/lockdown sobre `window.ethereum`.
   - Se prefiere el provider con `info.rdns === 'io.metamask'` (o nombre que incluya "metamask"); si no hay MetaMask por EIP-6963, se usa cualquier provider anunciado; si no hay ninguno, **fallback** a `window.ethereum` (si es array, el que tenga `isMetaMask === true` o el primero).
   - MetaMask recomienda explícitamente EIP-6963 para conexión robusta; el widget lo implementa como fuente principal del provider.
-- **Confirmación real del cambio de red (EIP-1193, chainChanged)**:
-  - MetaMask documenta: "Listen to the 'chainChanged' event to detect a user's network change." El widget **siempre** llama a `wallet_switchEthereumChain` (EIP-3326) al conectar; no se usa `eth_chainId` previo para saltar el switch (evita desincronización en SES donde el provider puede devolver la chain "deseada" sin que la UI de MetaMask haya cambiado). Solo se marca "conectado" cuando (a) se recibe el evento **chainChanged** con la chainId objetivo, o (b) tras el switch, un fallback a 600 ms comprueba `eth_chainId` por si la extensión no emitió el evento (ya estaba en la red). Timeout 5 s si no hay confirmación.
+- **Confirmación real del cambio de red (EIP-1193, chainChanged)** (Core.2 implementado):
+  - MetaMask documenta: "Listen to the 'chainChanged' event to detect a user's network change." El widget llama a `eth_requestAccounts` primero; luego asegura la cadena (switch/add si hace falta). No se usa `eth_chainId` previo para saltar el switch. Solo se marca "conectado" cuando (a) se recibe el evento **chainChanged** con la chainId objetivo, o (b) un fallback a 600 ms comprueba `eth_chainId` por si la extensión no emitió el evento. Timeout 5 s si no hay confirmación; en ese caso no se marca conectado y se notifica error. Implementación: `waitForChainConfirmation()` (listener chainChanged + setTimeout 600 ms para un `eth_chainId` + timeout 5 s).
 
 ---
 
@@ -85,12 +85,13 @@ El widget:
 
 ## 5. Flujo de conexión (resumen según documentación)
 
-1. Obtener cadena actual: `eth_chainId` (EIP-695, hex string).
-2. Si la cadena actual coincide con la deseada → `eth_requestAccounts` (EIP-1102) y actualizar estado.
-3. Si no coincide:
+1. **Primero** `eth_requestAccounts` (EIP-1102) — activa el provider y obtiene cuenta; popup si aplica.
+2. Obtener cadena actual: `eth_chainId` (EIP-695, hex string).
+3. Si la cadena actual coincide con la deseada → esperar confirmación (chainChanged o fallback 600 ms); si timeout 5 s, no conectar.
+4. Si no coincide:
    - Llamar a `wallet_switchEthereumChain` (EIP-3326) con `chainId` en hex.
-   - Si éxito → `eth_requestAccounts` y actualizar estado.
-   - Si error **4902** → llamar a `wallet_addEthereumChain` (EIP-3085) con parámetros completos (y `rpcUrls` no vacío); luego `wallet_switchEthereumChain`; luego `eth_requestAccounts` y actualizar estado.
+   - Si éxito → esperar confirmación (chainChanged o fallback 600 ms); si llega, actualizar estado; si timeout 5 s, no conectar.
+   - Si error **4902** → llamar a `wallet_addEthereumChain` (EIP-3085) con parámetros completos (y `rpcUrls` no vacío); luego `wallet_switchEthereumChain`; luego esperar confirmación igual.
    - Otros errores → no marcar como conectado; notificar al usuario (y opcionalmente log).
 
 ---

@@ -640,29 +640,65 @@
           }]
         }).then(doSwitch);
       }
+      // Core.2: Confirm we're on target chain via chainChanged or 600ms fallback; 5s timeout (no connect without confirmation).
+      function waitForChainConfirmation() {
+        var timeoutMs = 5000;
+        var fallbackDelayMs = 600;
+        return new Promise(function (resolve, reject) {
+          var done = false;
+          function cleanup() {
+            try { provider.removeListener('chainChanged', onChainChanged); } catch (e) {}
+            if (fallbackTimer) clearTimeout(fallbackTimer);
+            if (timeoutTimer) clearTimeout(timeoutTimer);
+          }
+          function finish() {
+            if (done) return;
+            done = true;
+            cleanup();
+            resolve();
+          }
+          function fail(err) {
+            if (done) return;
+            done = true;
+            cleanup();
+            reject(err || new Error('Chain confirmation timeout'));
+          }
+          function onChainChanged(id) {
+            if (chainIdHexEqual(chainIdToHex(id), chainIdHex)) {
+              log('chainChanged confirmed target chain', { chainId: chainIdHex });
+              finish();
+            }
+          }
+          provider.on('chainChanged', onChainChanged);
+          var fallbackTimer = setTimeout(function () {
+            if (done) return;
+            provider.request({ method: 'eth_chainId' }).then(function (id) {
+              if (done) return;
+              if (chainIdHexEqual(chainIdToHex(id), chainIdHex)) {
+                log('Fallback eth_chainId confirmed target chain', { chainId: chainIdHex });
+                finish();
+              }
+            }).catch(function () {});
+          }, fallbackDelayMs);
+          var timeoutTimer = setTimeout(function () { fail(new Error('Chain confirmation timeout (5s)')); }, timeoutMs);
+        });
+      }
       function ensureChainThenSetState(account) {
         return provider.request({ method: 'eth_chainId' }).then(function (currentId) {
           var currentHex = chainIdToHex(currentId);
           if (chainIdHexEqual(currentHex, chainIdHex)) {
-            log('Already on target chain', { chainId: chainIdHex });
-            setStateFromAccounts(account);
-            return;
+            log('Already on target chain; waiting for confirmation (chainChanged or 600ms fallback)', { chainId: chainIdHex });
+            return waitForChainConfirmation().then(function () { setStateFromAccounts(account); });
           }
           log('calling wallet_switchEthereumChain (EIP-3326)', { chainId: chainIdHex });
           return doSwitch()
-            .then(function () { return provider.request({ method: 'eth_chainId' }); })
-            .then(function (id) {
-              if (chainIdHexEqual(chainIdToHex(id), chainIdHex)) {
-                setStateFromAccounts(account);
-              } else {
-                setStateFromAccounts(account);
-              }
-            })
+            .then(function () { return waitForChainConfirmation(); })
+            .then(function () { setStateFromAccounts(account); })
             .catch(function (switchErr) {
               var code = switchErr && (switchErr.code || (switchErr.error && switchErr.error.code));
               if (code === 4902) {
                 return doAddThenSwitch()
-                  .then(function () { return provider.request({ method: 'eth_chainId' }); })
+                  .then(function () { return waitForChainConfirmation(); })
                   .then(function () { setStateFromAccounts(account); })
                   .catch(function (addErr) {
                     warn('add/switch chain failed', { code: addErr && addErr.code, message: addErr && addErr.message });
