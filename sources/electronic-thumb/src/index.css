@@ -1,0 +1,492 @@
+/**
+ * Electronic Thumb — estilos del widget.
+ * Todas las variables CSS (--et-*) tienen valores por defecto en .et-root.
+ * Para personalizar: defina las variables en el contenedor del widget (ej. el elemento con el atributo electronic-thumb-widget).
+ * Ver STYLING.md para la lista completa de variables.
+ */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  background: #0d0d0d;
+  color: #e5e5e5;
+}
+
+/* Raíz del widget: aquí se definen los valores por defecto de las variables. */
+.et-root {
+  /* Tipografía base */
+  --et-font-family: system-ui, -apple-system, sans-serif;
+  --et-font-size: 14px;
+  --et-color-text: #e5e5e5;
+  --et-color-text-muted: #a3a3a3;
+
+  /* Trigger (botón Connect / dirección). Colores por estado: desconectado = neutro; conectado = acento “conectado”. */
+  --et-trigger-padding-block: 10px;
+  --et-trigger-padding-inline: 16px;
+  --et-trigger-radius: 12px;
+  --et-trigger-font-size: 14px;
+  --et-trigger-font-weight: 500;
+  --et-trigger-gap: 6px;
+  --et-trigger-transition: background 0.15s, color 0.15s;
+  --et-trigger-connect-bg: rgba(255, 255, 255, 0.07);
+  --et-trigger-connect-bg-hover: rgba(255, 255, 255, 0.12);
+  --et-trigger-connect-text-color: #94a3b8;
+  --et-trigger-connect-icon-color: #94a3b8;
+  --et-trigger-loading-bg: rgba(255, 255, 255, 0.05);
+  --et-trigger-connected-bg: rgba(255, 255, 255, 0.06);
+  --et-trigger-connected-bg-hover: rgba(255, 255, 255, 0.1);
+  --et-trigger-connected-text-color: #4ade80;
+  --et-trigger-connected-icon-color: #4ade80;
+  --et-trigger-chevron-size: 10px;
+  --et-trigger-chevron-opacity: 0.8;
+  --et-trigger-connect-icon-size: 20px;
+  --et-trigger-icon-url: url("/img/hitchhikers.svg");
+
+  /* Panel flotante (drawer) */
+  --et-drawer-backdrop-bg: rgba(0, 0, 0, 0.4);
+  --et-drawer-backdrop-z: 9998;
+  --et-drawer-top: 56px;
+  --et-drawer-right: 12px;
+  --et-drawer-anchor-gap: 8px;
+  --et-drawer-anchor-right-margin: 0px;
+  --et-drawer-width: 368px;
+  --et-drawer-max-height: calc(100vh - 80px);
+  --et-drawer-bg: #1a1a1a;
+  --et-drawer-border-width: 1px;
+  --et-drawer-border-color: rgba(255, 255, 255, 0.12);
+  --et-drawer-radius: 16px;
+  --et-drawer-z: 9999;
+  --et-drawer-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --et-drawer-content-padding: 16px;
+  --et-drawer-header-padding-bottom: 12px;
+  --et-drawer-header-border-color: rgba(255, 255, 255, 0.08);
+  --et-drawer-header-margin-bottom: 12px;
+  --et-drawer-header-icon-size: 40px;
+  --et-drawer-address-font-size: 16px;
+  --et-drawer-address-font-weight: 500;
+  --et-drawer-chain-font-size: 12px;
+  --et-drawer-chain-color: #a3a3a3;
+  --et-drawer-chain-margin-top: 4px;
+  --et-drawer-section-margin-top: 8px;
+  --et-drawer-section-title-font-size: 12px;
+  --et-drawer-section-title-font-weight: 600;
+  --et-drawer-section-title-color: #a3a3a3;
+  --et-drawer-section-title-margin-bottom: 8px;
+  --et-drawer-row-padding-block: 12px;
+  --et-drawer-row-padding-inline: 14px;
+  --et-drawer-row-margin-bottom: 4px;
+  --et-drawer-row-radius: 12px;
+  --et-drawer-row-bg: rgba(255, 255, 255, 0.06);
+  --et-drawer-row-bg-hover: rgba(255, 255, 255, 0.1);
+  --et-drawer-row-color: #e5e5e5;
+  --et-drawer-row-font-size: 14px;
+  --et-drawer-row-transition: background 0.15s;
+  --et-drawer-row-disabled-opacity: 0.85;
+  --et-drawer-row-current-bg: rgba(34, 197, 94, 0.15);
+  --et-drawer-row-current-border: 1px solid rgba(34, 197, 94, 0.4);
+  --et-drawer-badge-font-size: 11px;
+  --et-drawer-badge-font-weight: 600;
+  --et-drawer-badge-color: #22c55e;
+  --et-drawer-disconnect-color: #f87171;
+  --et-drawer-disconnect-bg-hover: rgba(248, 113, 113, 0.15);
+  --et-drawer-details-inner-padding: 12px;
+  --et-drawer-details-inner-gap: 12px;
+}
+
+/* App shell (cuando el widget se usa como página completa) */
+.app {
+  min-height: 100vh;
+}
+
+.app__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--et-drawer-header-border-color);
+}
+
+.app__title {
+  font-weight: 600;
+}
+
+.app__main {
+  padding: 24px;
+}
+
+/* Web3Status — trigger (Uniswap pattern) */
+.web3-status {
+  padding: var(--et-trigger-padding-block) var(--et-trigger-padding-inline);
+  border-radius: var(--et-trigger-radius);
+  border: none;
+  font-size: var(--et-trigger-font-size);
+  font-weight: var(--et-trigger-font-weight);
+  font-family: var(--et-font-family);
+  cursor: pointer;
+  transition: var(--et-trigger-transition);
+}
+
+.web3-status--connect {
+  background: var(--et-trigger-connect-bg);
+  color: var(--et-trigger-connect-text-color);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--et-trigger-gap);
+}
+
+.web3-status--connect:hover {
+  background: var(--et-trigger-connect-bg-hover);
+}
+
+.web3-status--connect .web3-status__icon,
+.web3-status--loading .web3-status__icon {
+  background-color: var(--et-trigger-connect-icon-color);
+}
+
+.web3-status__connect-icon,
+.web3-status__icon {
+  display: inline-block;
+  width: var(--et-trigger-connect-icon-size);
+  height: var(--et-trigger-connect-icon-size);
+  flex-shrink: 0;
+  mask: var(--et-trigger-icon-url) no-repeat center;
+  mask-size: contain;
+  -webkit-mask: var(--et-trigger-icon-url) no-repeat center;
+  -webkit-mask-size: contain;
+}
+
+.web3-status--loading {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--et-trigger-gap);
+  background: var(--et-trigger-loading-bg);
+  color: var(--et-trigger-connect-text-color);
+  cursor: wait;
+}
+
+.web3-status--connected {
+  background: var(--et-trigger-connected-bg);
+  color: var(--et-trigger-connected-text-color);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--et-trigger-gap);
+}
+
+.web3-status--connected .web3-status__icon {
+  background-color: var(--et-trigger-connected-icon-color);
+}
+
+.web3-status--connected:hover {
+  background: var(--et-trigger-connected-bg-hover);
+}
+
+.web3-status__address {
+  font-variant-numeric: tabular-nums;
+}
+
+.web3-status__chevron {
+  font-size: var(--et-trigger-chevron-size);
+  opacity: var(--et-trigger-chevron-opacity);
+}
+
+/* AccountDrawer — panel (Uniswap pattern) */
+.account-drawer__backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--et-drawer-backdrop-bg);
+  z-index: var(--et-drawer-backdrop-z);
+}
+
+.account-drawer {
+  position: fixed;
+  top: var(--et-drawer-top);
+  right: var(--et-drawer-right);
+  width: var(--et-drawer-width);
+  max-width: calc(100vw - 24px);
+  max-height: var(--et-drawer-max-height);
+  overflow: auto;
+  background: var(--et-drawer-bg);
+  border: var(--et-drawer-border-width) solid var(--et-drawer-border-color);
+  border-radius: var(--et-drawer-radius);
+  z-index: var(--et-drawer-z);
+  box-shadow: var(--et-drawer-shadow);
+}
+
+.account-drawer__content {
+  padding: var(--et-drawer-content-padding);
+}
+
+.account-drawer__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--et-drawer-content-padding);
+  padding-bottom: var(--et-drawer-header-padding-bottom);
+  border-bottom: var(--et-drawer-border-width) solid var(--et-drawer-header-border-color);
+  margin-bottom: var(--et-drawer-header-margin-bottom);
+}
+
+.account-drawer__header-left {
+  flex: 1 1 0%;
+  min-width: 0;
+}
+
+.account-drawer__header-icon {
+  flex-shrink: 0;
+  width: var(--et-drawer-header-icon-size);
+  height: var(--et-drawer-header-icon-size);
+  background-color: var(--et-drawer-row-color);
+  mask: var(--et-trigger-icon-url) no-repeat center;
+  mask-size: contain;
+  -webkit-mask: var(--et-trigger-icon-url) no-repeat center;
+  -webkit-mask-size: contain;
+  opacity: 0.85;
+}
+
+.account-drawer__address-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.account-drawer__address {
+  font-variant-numeric: tabular-nums;
+  font-size: var(--et-drawer-address-font-size);
+  font-weight: var(--et-drawer-address-font-weight);
+  color: var(--et-drawer-row-color);
+}
+
+.account-drawer__address-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.account-drawer__address-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border: none;
+  background: none;
+  color: var(--et-drawer-row-color);
+  opacity: 0.5;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: opacity 0.15s;
+}
+
+.account-drawer__address-icon-btn:hover {
+  opacity: 0.9;
+}
+
+.account-drawer__address-icon-btn:focus-visible {
+  outline: 1px solid var(--et-drawer-row-color);
+  outline-offset: 2px;
+}
+
+.account-drawer__address-icon-btn--link {
+  text-decoration: none;
+}
+
+.account-drawer__address-icon {
+  display: inline-flex;
+  line-height: 0;
+}
+
+.account-drawer__address-icon svg {
+  display: block;
+}
+
+.account-drawer__chain {
+  display: block;
+  font-size: var(--et-drawer-chain-font-size);
+  color: var(--et-drawer-chain-color);
+  margin-top: var(--et-drawer-chain-margin-top);
+}
+
+.account-drawer__section {
+  margin-top: var(--et-drawer-section-margin-top);
+}
+
+.account-drawer__actions-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--et-drawer-row-margin-bottom);
+  margin-top: var(--et-drawer-section-margin-top);
+  padding-top: var(--et-drawer-section-margin-top);
+  border-top: 1px solid var(--et-drawer-header-border-color);
+}
+
+.account-drawer__more-options-btn {
+  flex: 1 1 0%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.25em;
+  padding: var(--et-drawer-row-padding-block) var(--et-drawer-row-padding-inline);
+  border: none;
+  border-radius: var(--et-drawer-row-radius);
+  background: var(--et-drawer-row-bg);
+  color: var(--et-drawer-section-title-color);
+  font-size: var(--et-drawer-section-title-font-size);
+  font-weight: var(--et-drawer-section-title-font-weight);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-family: var(--et-font-family);
+  cursor: pointer;
+  user-select: none;
+  transition: var(--et-drawer-row-transition);
+  text-align: left;
+}
+
+.account-drawer__more-options-btn:hover {
+  background: var(--et-drawer-row-bg-hover);
+}
+
+.account-drawer__more-options-icon {
+  font-size: 0.7em;
+  opacity: 0.8;
+}
+
+.account-drawer__details-inner {
+  margin-top: var(--et-drawer-details-inner-gap);
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--et-drawer-details-inner-padding);
+  border-top: 1px solid var(--et-drawer-header-border-color);
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: var(--et-drawer-row-radius);
+}
+
+.account-drawer__details-inner .account-drawer__section {
+  margin-top: var(--et-drawer-section-margin-top);
+}
+
+.account-drawer__details-inner .account-drawer__section:first-child {
+  margin-top: 0;
+}
+
+.account-drawer__disconnect-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: var(--et-drawer-row-padding-block) var(--et-drawer-row-padding-inline);
+  border: none;
+  border-radius: var(--et-drawer-row-radius);
+  background: var(--et-drawer-row-bg);
+  color: var(--et-drawer-disconnect-color);
+  font-size: var(--et-drawer-row-font-size);
+  font-family: var(--et-font-family);
+  cursor: pointer;
+  transition: var(--et-drawer-row-transition);
+}
+
+.account-drawer__disconnect-btn:hover {
+  background: var(--et-drawer-disconnect-bg-hover);
+}
+
+.account-drawer__disconnect-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.account-drawer__section-title {
+  font-size: var(--et-drawer-section-title-font-size);
+  font-weight: var(--et-drawer-section-title-font-weight);
+  color: var(--et-drawer-section-title-color);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--et-drawer-section-title-margin-bottom);
+}
+
+.account-drawer__native-token {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35em 0.5em;
+  padding: var(--et-drawer-row-padding-block) var(--et-drawer-row-padding-inline);
+  margin-bottom: var(--et-drawer-row-margin-bottom);
+  border-radius: var(--et-drawer-row-radius);
+  background: var(--et-drawer-row-bg);
+  font-size: var(--et-drawer-row-font-size);
+  color: var(--et-drawer-row-color);
+}
+
+.account-drawer__native-token-name {
+  font-weight: 500;
+}
+
+.account-drawer__native-token-symbol {
+  color: var(--et-color-text-muted);
+  font-size: 0.9em;
+}
+
+.account-drawer__native-token-balance {
+  width: 100%;
+  margin-top: 0.25em;
+  font-variant-numeric: tabular-nums;
+}
+
+.account-drawer__native-token-balance--loading {
+  color: var(--et-color-text-muted);
+}
+
+.account-drawer__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--et-drawer-row-padding-block) var(--et-drawer-row-padding-inline);
+  margin-bottom: var(--et-drawer-row-margin-bottom);
+  border: none;
+  border-radius: var(--et-drawer-row-radius);
+  background: var(--et-drawer-row-bg);
+  color: var(--et-drawer-row-color);
+  font-size: var(--et-drawer-row-font-size);
+  font-family: var(--et-font-family);
+  text-align: left;
+  cursor: pointer;
+  transition: var(--et-drawer-row-transition);
+}
+
+.account-drawer__row:hover:not(:disabled) {
+  background: var(--et-drawer-row-bg-hover);
+}
+
+.account-drawer__row:disabled {
+  cursor: default;
+  opacity: var(--et-drawer-row-disabled-opacity);
+}
+
+.account-drawer__row--current {
+  background: var(--et-drawer-row-current-bg);
+  border: var(--et-drawer-row-current-border);
+}
+
+.account-drawer__row-label {
+  flex: 1;
+}
+
+.account-drawer__row-badge {
+  font-size: var(--et-drawer-badge-font-size);
+  font-weight: var(--et-drawer-badge-font-weight);
+  color: var(--et-drawer-badge-color);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.account-drawer__disconnect {
+  color: var(--et-drawer-disconnect-color);
+}
+
+.account-drawer__disconnect:hover {
+  background: var(--et-drawer-disconnect-bg-hover);
+}

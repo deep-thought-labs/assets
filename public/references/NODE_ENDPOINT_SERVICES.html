@@ -5,15 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Node endpoint and service types — Project 42</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%2342a5f5'/><text x='16' y='22' text-anchor='middle' fill='white' font-size='18' font-family='sans-serif'>42</text></svg>">
-  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-  <p class="back"><a href="../index.html">← Back to Assets</a></p>
+  <p class="back"><a href="../">← Back to Assets</a></p>
   <h1>Node endpoint and service types</h1>
   <p class="subtitle">Project 42 · References</p>
 
   <div class="reference-content">
-    <p>This document describes the <strong>types of services or endpoints</strong> that an Infinite blockchain node (Drive) can expose. It serves as a single reference to understand what each one is, what it is for, and who consumes it, in both Cosmos/CometBFT and EVM contexts. The information is based on <a href="https://docs.infinitedrive.xyz/es/drive/services/catalog/node0-infinite/#configuraci%C3%B3n-de-puertos" target="_blank" rel="noopener">Drive documentation</a> (service catalog, port configuration) and the <a href="https://docs.infinitedrive.xyz/es/drive/services/ports/blockchain-nodes/" target="_blank" rel="noopener">blockchain node port reference</a>, plus standard Cosmos SDK and Ethereum terminology.</p>
+    <p>This document describes the <strong>types of services or endpoints</strong> that an <a href="https://infinitedrive.xyz/blockchain">Infinite Drive</a> blockchain node can expose. It serves as a single reference to understand what each one is, what it is for, and who consumes it, in both Cosmos/CometBFT and EVM contexts. The information is based on <a href="https://docs.infinitedrive.xyz/es/drive/services/catalog/node0-infinite/#configuraci%C3%B3n-de-puertos" target="_blank" rel="noopener">Drive documentation</a> (service catalog, port configuration) and the <a href="https://docs.infinitedrive.xyz/es/drive/services/ports/blockchain-nodes/" target="_blank" rel="noopener">blockchain node port reference</a>, plus standard Cosmos SDK and Ethereum terminology.</p>
     <p>The default ports cited correspond to <strong>service 0 (Mainnet)</strong>; for Testnet and other services an offset is applied (see Drive documentation).</p>
     <p><strong>Note:</strong> The current consensus engine is <strong>CometBFT</strong> (successor to Tendermint Core since 2022). CometBFT is used as the primary name; where it adds context, the previous name is indicated.</p>
 
@@ -46,7 +46,7 @@
         <tr><td><code>pprof</code></td><td>pprof (development, do not expose)</td></tr>
       </tbody>
     </table>
-    <p><strong>Note:</strong> P2P is not an "endpoint" that wallets or dApps connect to; it is node-to-node communication. Public RPC listings (e.g. chainlist) typically refer to <strong>JSON-RPC HTTP/WebSocket</strong> (EVM) and <strong>gRPC/gRPC-Web</strong> and <strong>REST</strong> (Cosmos). In <a href="NETWORK_DATA_JSON_SCHEMA.html">network-data.json</a>, the <strong><code>p2p</code></strong> key can still be used under <code>endpoints</code> to list <strong>P2P seeds</strong> (and optionally persistent peers) so node operators have a single place to copy seed URLs; each entry uses the same <code>{ "url", "primary?" }</code> shape, with <code>url</code> being e.g. <code>seed-id@host:26656</code>.</p>
+    <p><strong>Note:</strong> P2P is not an "endpoint" that wallets or dApps connect to; it is node-to-node communication. Public RPC listings (e.g. chainlist) typically refer to <strong>JSON-RPC HTTP/WebSocket</strong> (EVM) and <strong>gRPC/gRPC-Web</strong> and <strong>REST</strong> (Cosmos). In <a href="NETWORK_DATA_JSON_SCHEMA">network-data.json</a>, the <strong><code>p2p</code></strong> key can still be used under <code>endpoints</code> to list <strong>P2P seeds</strong> (and optionally persistent peers) so node operators have a single place to copy seed URLs; each entry uses the same <code>{ "url", "primary?" }</code> shape, with <code>url</code> being e.g. <code>seed-id@host:26656</code>.</p>
 
     <hr>
 
@@ -179,7 +179,7 @@
     <hr>
 
     <h2>Relationship to network-data.json and public listings</h2>
-    <p>In the <a href="NETWORK_DATA_JSON_SCHEMA.html">network-data.json</a> schema, the <strong><code>endpoints</code></strong> object uses <strong>service key names</strong> as keys (same as in the table above). Supported keys include public APIs and <strong><code>p2p</code></strong> for listing P2P seeds (so node operators can copy seed URLs from one place). Internal or local-only services (ABCI, pprof, Prometheus, EVM Metrics, Geth Metrics) are not included in <code>endpoints</code>.</p>
+    <p>In the <a href="NETWORK_DATA_JSON_SCHEMA">network-data.json</a> schema, the <strong><code>endpoints</code></strong> object uses <strong>service key names</strong> as keys (same as in the table above). Supported keys include public APIs and <strong><code>p2p</code></strong> for listing P2P seeds (so node operators can copy seed URLs from one place). Internal or local-only services (ABCI, pprof, Prometheus, EVM Metrics, Geth Metrics) are not included in <code>endpoints</code>.</p>
     <table class="chain-table">
       <thead><tr><th>Node service type</th><th>Key in <code>endpoints</code></th><th>Typical use in listings</th></tr></thead>
       <tbody>

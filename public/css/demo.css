@@ -1,0 +1,130 @@
+/**
+ * Demo-page-only layout: menu bar, widget slot, main container.
+ * Load only on pages that embed the widget in a fake header (e.g. Electronic Thumb demo).
+ * Overrides for .et-root inside the demo so the widget fits in the slot.
+ */
+.demo-menu-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  height: 60px;
+  min-height: 60px;
+  max-height: 60px;
+  padding: 0 1rem;
+  background: rgba(30, 30, 40, 0.95);
+  border: 1px solid var(--g-border);
+  border-radius: 8px 8px 0 0;
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+.demo-menu-bar-caption {
+  font-size: var(--g-font-size-xs);
+  color: var(--g-accent-muted);
+  flex-shrink: 0;
+}
+
+.demo-menu-bar-caption strong {
+  color: var(--g-accent-text);
+}
+
+.demo-widget-slot {
+  flex-shrink: 0;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.demo-widget-slot .et-root,
+.demo-widget-slot .et-root .app,
+.demo-widget-slot .et-root .app__header {
+  min-height: 0 !important;
+  height: auto !important;
+}
+
+.demo-widget-slot .et-root .app__header {
+  padding: 0;
+  border: none;
+}
+
+.demo-widget-slot .et-root .app__title {
+  display: none;
+}
+
+.demo-widget-slot .et-root .app__main {
+  display: none;
+}
+
+.demo-main-container {
+  width: 100%;
+  height: 100px;
+  min-height: 100px;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  background: rgba(50, 52, 60, 0.5);
+  border: 1px solid var(--g-border);
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+}
+
+.demo-main-caption {
+  font-size: var(--g-font-size-xs);
+  color: var(--g-accent-muted);
+}
+
+/* Syntax section: each step in its own box */
+.syntax-step {
+  margin-bottom: 1.25rem;
+  padding: 1rem;
+  border: 1px solid var(--g-border);
+  border-radius: 8px;
+  background: var(--g-bg-elevated, rgba(255, 255, 255, 0.03));
+}
+.syntax-step:last-child {
+  margin-bottom: 0;
+}
+.syntax-step-desc {
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+  font-size: 0.9375rem;
+}
+/* Match .code-box pre so highlight.js theme and copy block look the same */
+.syntax-step pre {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  font-size: var(--g-font-size-code);
+  overflow: auto;
+  white-space: pre;
+  min-height: 3rem;
+  font-family: var(--g-font-mono);
+  border-radius: 6px;
+}
+.syntax-step pre code {
+  padding: 0;
+  background: none;
+}
+.syntax-step .actions {
+  border-top: 1px solid var(--g-border);
+  border-radius: 0 0 6px 6px;
+  margin: 0 -1rem -1rem -1rem;
+  padding: 0.5rem 1rem;
+  background: rgba(0, 0, 0, 0.2);
+}
+.syntax-step .actions button {
+  font-size: var(--g-font-size-xs);
+  padding: 0.35rem 0.75rem;
+  background: rgba(0, 255, 65, 0.1);
+  color: var(--g-accent);
+  border: 1px solid var(--g-border);
+  border-radius: var(--g-radius-sm);
+  cursor: pointer;
+  font-family: inherit;
+}
+.syntax-step .actions button:hover {
+  background: rgba(0, 255, 65, 0.2);
+}

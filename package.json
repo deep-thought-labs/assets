@@ -1,0 +1,9 @@
+{
+  "name": "assets-b",
+  "private": true,
+  "description": "Assets y widgets estáticos (build + deploy a public/)",
+  "scripts": {
+    "deploy": "node scripts/deploy.js",
+    "start": "node scripts/server.js"
+  }
+}

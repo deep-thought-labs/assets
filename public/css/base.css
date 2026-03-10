@@ -1,0 +1,98 @@
+/**
+ * Base: reset, body, typography.
+ * Uses variables.css.
+ */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: var(--g-space-page);
+  min-height: 100vh;
+  background: var(--g-bg);
+  color: var(--g-accent);
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size);
+  line-height: var(--g-line-height);
+}
+
+/* Optional scanline overlay (Matrix) */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.15) 2px,
+    rgba(0, 0, 0, 0.15) 4px
+  );
+  pointer-events: none;
+}
+
+h1 {
+  color: var(--g-accent);
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-shadow: 0 0 8px var(--g-accent);
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
+}
+
+h2 {
+  color: var(--g-accent);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  color: var(--g-accent-muted);
+  font-size: var(--g-font-size-sm);
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+}
+
+p {
+  color: var(--g-accent-text);
+  margin: 0 0 var(--g-space-block) 0;
+  max-width: 100%;
+}
+
+p:last-child {
+  margin-bottom: 0;
+}
+
+.muted {
+  color: var(--g-accent-dim);
+  font-size: var(--g-font-size-xs);
+  margin: 0.25rem 0;
+}
+
+section {
+  margin: var(--g-space-section);
+}
+
+ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+li {
+  margin: 0.5rem 0;
+}
+
+a {
+  color: var(--g-accent);
+  text-decoration: none;
+  border-bottom: 1px solid var(--g-border);
+}
+
+a:hover {
+  color: var(--g-accent-hover);
+  text-shadow: 0 0 6px var(--g-accent);
+  border-bottom-color: var(--g-accent);
+}

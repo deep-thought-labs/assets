@@ -1,0 +1,573 @@
+/**
+ * Global components: nav, back, tables, copy-block, modal, reference-content,
+ * and shared content patterns (cards, code-box, output-box) for doc/demo pages.
+ */
+.back {
+  margin-bottom: 1rem;
+}
+
+.back a {
+  font-size: var(--g-font-size-sm);
+}
+
+/* Section title as link (e.g. Widgets → Electronic Thumb): same family as .back link, reads as subtitle */
+.nav-group-title {
+  font-size: var(--g-font-size-sm);
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.nav-group-title a {
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.nav-group {
+  margin: 2rem 0;
+}
+
+.nav-entries {
+  list-style: none;
+  padding-left: 0;
+  margin: 0.5rem 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.nav-entry {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--g-accent);
+  color: var(--g-accent);
+  text-decoration: none;
+  border-bottom-width: 2px;
+}
+
+.nav-entry:hover {
+  background: rgba(0, 255, 65, 0.1);
+  color: var(--g-accent-hover);
+  text-shadow: 0 0 6px var(--g-accent);
+}
+
+/* Chain detail tables */
+.chain-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--g-font-size-sm);
+  table-layout: auto;
+}
+
+.chain-table th,
+.chain-table td {
+  padding: 0.4rem 0.75rem;
+  text-align: left;
+  border: 1px solid var(--g-border);
+}
+
+.chain-table th:last-child,
+.chain-table td:last-child {
+  min-width: 10rem;
+}
+
+.chain-table th {
+  color: var(--g-accent);
+  font-weight: 700;
+}
+
+.chain-table thead th {
+  background: rgba(0, 255, 65, 0.18);
+  border-bottom: 2px solid var(--g-border-strong);
+  padding: 0.5rem 0.75rem;
+}
+
+.chain-table td:first-child {
+  color: var(--g-accent);
+  background: rgba(0, 255, 65, 0.06);
+}
+
+.chain-table td:not(:first-child) {
+  color: var(--g-accent-text);
+}
+
+.chain-table code {
+  color: inherit;
+  font-size: 0.9em;
+}
+
+.chain-table tr.endpoint-group-header td {
+  border-top: 2px solid var(--g-border-subtle);
+  padding: 0.5rem 0.75rem;
+  background: rgba(0, 255, 65, 0.12);
+  color: var(--g-accent);
+  font-weight: 700;
+}
+
+.chain-table tr.endpoint-group-header:first-child td {
+  border-top-width: 1px;
+}
+
+.chain-table a {
+  border-bottom: none;
+}
+
+/* Chain table action buttons (Resources, Explorers, Endpoints) — one style for Download, Copy, Open.
+   Fixed height so <button> and <a> are identical regardless of text. */
+.chain-table-action-btn,
+button.chain-table-action-btn,
+a.chain-table-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  min-height: 28px;
+  max-height: 28px;
+  padding: 0 0.5rem;
+  font-size: 0.75rem;
+  font-family: inherit;
+  line-height: 1;
+  background: transparent;
+  border: 1px solid var(--g-accent);
+  color: var(--g-accent);
+  cursor: pointer;
+  box-sizing: border-box;
+  text-decoration: none;
+  -webkit-appearance: none;
+  appearance: none;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.chain-table-action-btn:hover,
+button.chain-table-action-btn:hover,
+a.chain-table-action-btn:hover {
+  background: rgba(0, 255, 65, 0.1);
+}
+
+.chain-table td.actions-cell {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+/* Copy block & button */
+.copy-block-wrap {
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.copy-block {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 0.35rem 0.5rem;
+  font-size: var(--g-font-size-code);
+  background: var(--g-surface);
+  border: 1px solid var(--g-border);
+  color: var(--g-accent-text);
+  font-family: var(--g-font-mono);
+}
+
+.copy-btn {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-family: inherit;
+  background: transparent;
+  border: 1px solid var(--g-accent);
+  color: var(--g-accent);
+  cursor: pointer;
+}
+
+.copy-btn:hover {
+  background: rgba(0, 255, 65, 0.1);
+}
+
+.endpoint-url {
+  word-break: break-all;
+}
+
+/* Copy command modal */
+.copy-command-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.copy-command-modal.is-open {
+  display: flex;
+}
+
+.copy-command-modal__box {
+  background: var(--g-bg);
+  border: 1px solid var(--g-accent);
+  padding: 1.25rem;
+  max-width: 32rem;
+  width: 100%;
+}
+
+.copy-command-modal__title {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  color: var(--g-accent);
+  clear: right;
+}
+
+.copy-command-modal__description {
+  margin: 0 0 0.75rem;
+  font-size: var(--g-font-size-xs);
+  color: var(--g-accent-muted);
+}
+
+.copy-command-modal__close {
+  float: right;
+  padding: 0.2rem 0.4rem;
+  font-size: var(--g-font-size-xs);
+  font-family: inherit;
+  background: transparent;
+  border: 1px solid var(--g-border);
+  color: var(--g-accent-muted);
+  cursor: pointer;
+}
+
+.copy-command-modal__close:hover {
+  color: var(--g-accent);
+  border-color: var(--g-accent);
+}
+
+.copy-command-modal__pre {
+  margin: 0 0 0.75rem;
+  padding: 0.5rem 0.75rem;
+  font-size: var(--g-font-size-code);
+  background: var(--g-surface-strong);
+  border: 1px solid var(--g-border);
+  color: var(--g-accent-text);
+  font-family: var(--g-font-mono);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* Reference docs */
+.reference-content h2 {
+  margin-top: 1.75rem;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid var(--g-border);
+}
+
+.reference-content h2:first-child {
+  margin-top: 0;
+}
+
+.reference-content h3 {
+  font-size: 0.95rem;
+  color: var(--g-accent-muted);
+  margin: 1.25rem 0 0.4rem;
+}
+
+.reference-content p {
+  margin: 0.5rem 0 1rem;
+}
+
+.reference-content code {
+  background: rgba(0, 255, 65, 0.08);
+  padding: 0.15em 0.35em;
+  border: 1px solid var(--g-border);
+  font-size: 0.9em;
+}
+
+.reference-content pre {
+  margin: 0.75rem 0 1rem;
+  padding: 0.75rem 1rem;
+  font-size: var(--g-font-size-code);
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--g-border);
+  color: var(--g-accent-text);
+  font-family: var(--g-font-mono);
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-x: auto;
+}
+
+.reference-content pre code {
+  background: none;
+  padding: 0;
+  border: none;
+}
+
+/* Markdown-rendered code blocks: same look as .code-box + Copy button, highlight.js-ready */
+.reference-content .markdown-code-block {
+  margin: 1.5rem 0;
+  padding: 0;
+  border: 1px solid var(--g-border);
+  border-radius: var(--g-radius-sm);
+  background: var(--g-surface);
+  overflow: hidden;
+}
+.reference-content .markdown-code-block pre {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  font-size: var(--g-font-size-code);
+  overflow: auto;
+  white-space: pre;
+  min-height: 3rem;
+  font-family: var(--g-font-mono);
+}
+.reference-content .markdown-code-block pre code {
+  padding: 0;
+  background: none;
+}
+.reference-content .markdown-code-block .actions {
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid var(--g-border);
+  background: rgba(0, 0, 0, 0.2);
+}
+.reference-content .markdown-code-block .actions button {
+  font-size: var(--g-font-size-xs);
+  padding: 0.35rem 0.75rem;
+  background: rgba(0, 255, 65, 0.1);
+  color: var(--g-accent);
+  border: 1px solid var(--g-border);
+  border-radius: var(--g-radius-sm);
+  cursor: pointer;
+  font-family: inherit;
+}
+.reference-content .markdown-code-block .actions button:hover {
+  background: rgba(0, 255, 65, 0.2);
+}
+
+.reference-content ul {
+  margin: 0.5rem 0 1rem;
+  padding-left: 1.5rem;
+  list-style: disc;
+}
+
+.reference-content li {
+  margin: 0.35rem 0;
+  color: var(--g-accent-text);
+}
+
+.reference-content hr {
+  border: none;
+  border-top: 1px solid var(--g-border);
+  margin: 1.5rem 0;
+}
+
+.reference-content .chain-table {
+  margin: 0.5rem 0 1rem;
+}
+
+.reference-content .chain-table th:last-child,
+.reference-content .chain-table td:last-child {
+  min-width: 0;
+}
+
+/* ----- Shared content patterns (doc/demo pages) ----- */
+.content-page {
+  max-width: 72rem;
+  margin: 0 auto;
+}
+
+.content-label {
+  display: block;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--g-accent-muted);
+  margin-bottom: 0.5rem;
+}
+
+.content-intro {
+  font-size: var(--g-font-size-sm);
+  color: var(--g-accent-muted);
+  margin: 0.75rem 0 1.25rem 0;
+  line-height: 1.5;
+}
+
+.content-notice {
+  font-size: var(--g-font-size-sm);
+  color: var(--g-accent-muted);
+  margin: 0 0 1.25rem 0;
+  padding: 0.75rem 1rem;
+  line-height: 1.5;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--g-border);
+  border-radius: var(--g-radius-sm);
+}
+
+.content-notice code {
+  font-size: 0.9em;
+}
+
+.content-notice-code {
+  margin: 0.5rem 0 1rem;
+  padding: 0.5rem 0.75rem;
+  font-size: var(--g-font-size-code);
+  font-family: var(--g-font-mono);
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--g-border);
+  border-radius: var(--g-radius-sm);
+  overflow-x: auto;
+}
+.content-notice-code code {
+  padding: 0;
+  background: none;
+}
+
+.card {
+  margin: 1.5rem 0;
+  padding: 1.25rem;
+  border: 1px solid var(--g-border);
+  border-radius: var(--g-radius-sm);
+  background: rgba(0, 255, 65, 0.04);
+}
+
+/* Code box (collapsible details) and output box — shared structure */
+.code-box,
+.output-box {
+  margin: 1.5rem 0;
+  padding: 0;
+  border: 1px solid var(--g-border);
+  border-radius: var(--g-radius-sm);
+  background: var(--g-surface);
+  overflow: hidden;
+}
+
+.code-box .content-label,
+.output-box .content-label {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--g-border);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+details.code-box {
+  display: block;
+}
+
+details.code-box[open] .code-summary::before {
+  content: "▼ ";
+  font-size: 0.7em;
+}
+
+details.code-box:not([open]) .code-summary::before {
+  content: "▶ ";
+  font-size: 0.7em;
+}
+
+details.code-box:not([open]) .code-summary {
+  border-radius: 0 0 var(--g-radius-sm) var(--g-radius-sm);
+}
+
+.code-summary {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--g-border);
+  background: rgba(0, 0, 0, 0.2);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--g-accent-muted);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.code-summary::-webkit-details-marker {
+  display: none;
+}
+
+details.code-box > pre {
+  border-bottom: none;
+}
+
+.code-box pre,
+.output-box pre {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  font-size: var(--g-font-size-code);
+  overflow: auto;
+  white-space: pre;
+  min-height: 3rem;
+  font-family: var(--g-font-mono);
+}
+
+.code-box pre code,
+.output-box pre code {
+  padding: 0;
+  background: none;
+}
+
+.actions {
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid var(--g-border);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.actions button {
+  font-size: var(--g-font-size-xs);
+  padding: 0.35rem 0.75rem;
+  background: rgba(0, 255, 65, 0.1);
+  color: var(--g-accent);
+  border: 1px solid var(--g-border);
+  border-radius: var(--g-radius-sm);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.actions button:hover {
+  background: rgba(0, 255, 65, 0.2);
+}
+
+.code-desc {
+  font-size: var(--g-font-size-xs);
+  color: var(--g-accent-muted);
+  margin: 0.5rem 0.75rem 0 0.75rem;
+  line-height: 1.45;
+}
+
+.syntax-section {
+  margin: 1.25rem 0;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--g-border);
+  border-radius: var(--g-radius-sm);
+  background: var(--g-surface);
+}
+
+.syntax-section h2 {
+  font-size: 0.9rem;
+  margin: 0 0 0.75rem 0;
+}
+
+.syntax-section p {
+  font-size: var(--g-font-size-xs);
+  color: var(--g-accent-muted);
+  margin: 0 0 0.5rem 0;
+  line-height: 1.5;
+}
+
+.syntax-section p:last-of-type {
+  margin-bottom: 0;
+}
+
+.syntax-section code {
+  font-size: var(--g-font-size-code);
+  background: var(--g-surface-strong);
+  padding: 0.15em 0.4em;
+  border-radius: var(--g-radius-sm);
+}
+
+.syntax-section pre {
+  margin: 0.75rem 0 0 0;
+  padding: 0.75rem;
+  background: var(--g-surface-strong);
+  border-radius: 6px;
+  font-size: var(--g-font-size-code);
+  overflow-x: auto;
+}

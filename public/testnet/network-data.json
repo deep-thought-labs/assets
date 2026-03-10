@@ -32,13 +32,21 @@
     ]
   },
   "resources": {
-    "genesis": {
-      "path": "/testnet/genesis.json",
-      "curl_output_filename": "genesis.json"
-    },
     "network_data": {
-      "path": "/testnet/network-data.json",
-      "curl_output_filename": "network-data.json"
+      "src": "/testnet/network-data.json",
+      "curl_output_filename": "network-data.json",
+      "download": true,
+      "open_in_browser": true
+    },
+    "genesis": {
+      "src": "/testnet/genesis.json",
+      "curl_output_filename": "genesis.json",
+      "download": true,
+      "open_in_browser": true
+    },
+    "api-blockscout": {
+      "src": "https://testnet-scan.infinitedrive.xyz/api-docs",
+      "open_in_browser": true
     }
   },
   "endpoints": {

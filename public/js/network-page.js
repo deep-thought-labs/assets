@@ -78,6 +78,22 @@
     }
   }
 
+  function isAbsoluteUrl(pathOrUrl) {
+    return typeof pathOrUrl === 'string' && (pathOrUrl.indexOf('http://') === 0 || pathOrUrl.indexOf('https://') === 0);
+  }
+
+  function resourceHref(pathOrUrl, base) {
+    if (isAbsoluteUrl(pathOrUrl)) return pathOrUrl;
+    var isHttp = base && (base.indexOf('http://') === 0 || base.indexOf('https://') === 0);
+    return isHttp ? base + pathOrUrl : pathOrUrl;
+  }
+
+  function resourceCurlUrl(pathOrUrl, base) {
+    if (isAbsoluteUrl(pathOrUrl)) return pathOrUrl;
+    var isHttp = base && (base.indexOf('http://') === 0 || base.indexOf('https://') === 0);
+    return isHttp ? base + pathOrUrl : pathOrUrl;
+  }
+
   function renderResources(tbody, data) {
     if (!tbody) return;
     if (!data || !data.resources) {
@@ -86,32 +102,42 @@
     }
     var res = data.resources;
     var base = window.location.origin;
-    var isHttp = base && (base.startsWith('http://') || base.startsWith('https://'));
     var rows = [];
 
-    if (res.genesis && res.genesis.path) {
-      var genesisPath = res.genesis.path;
-      var genesisFilename = res.genesis.curl_output_filename || 'genesis.json';
-      var genesisHref = isHttp ? base + genesisPath : 'genesis.json';
-      var genesisLabel = isHttp ? (base + genesisPath) : 'genesis.json';
-      var btn = '<button type="button" class="copy-btn genesis-terminal-btn" data-copy-command-open data-copy-command-title="Download genesis (terminal)" data-copy-command-description="Download the genesis file to the current directory with curl." data-copy-command-curl-url="' + escapeHtml(genesisPath) + '" data-copy-command-curl-output="' + escapeHtml(genesisFilename) + '" aria-label="Download">Download</button>';
-      rows.push('<tr><td>genesis</td><td><a href="' + escapeHtml(genesisHref) + '" target="_blank" rel="noopener">' + escapeHtml(genesisLabel) + '</a></td><td>' + btn + '</td></tr>');
-    }
+    var titles = { genesis: 'Download genesis (terminal)', network_data: 'Download network-data.json (terminal)' };
 
-    if (res.network_data && res.network_data.path) {
-      var ndPath = res.network_data.path;
-      var ndFilename = res.network_data.curl_output_filename || 'network-data.json';
-      var ndHref = isHttp ? base + ndPath : 'network-data.json';
-      var ndLabel = isHttp ? (base + ndPath) : 'network-data.json';
-      var ndBtn = '<button type="button" class="copy-btn genesis-terminal-btn" data-copy-command-open data-copy-command-title="Download network-data.json (terminal)" data-copy-command-description="Download the network data file to the current directory with curl." data-copy-command-curl-url="' + escapeHtml(ndPath) + '" data-copy-command-curl-output="' + escapeHtml(ndFilename) + '" aria-label="Download">Download</button>';
-      rows.push('<tr><td>network_data</td><td><a href="' + escapeHtml(ndHref) + '" target="_blank" rel="noopener">' + escapeHtml(ndLabel) + '</a></td><td>' + ndBtn + '</td></tr>');
+    for (var key in res) {
+      if (!Object.prototype.hasOwnProperty.call(res, key)) continue;
+      var r = res[key];
+      var pathOrUrl = r.src || r.path || r.url;
+      if (!pathOrUrl) continue;
+      var showDownload = r.download === true;
+      var showOpenInBrowser = r.open_in_browser === true;
+      var href = resourceHref(pathOrUrl, base);
+      var curlUrl = resourceCurlUrl(pathOrUrl, base);
+      var filename = r.curl_output_filename || (key + '.json');
+      var title = titles[key] || 'Download ' + key + ' (terminal)';
+      var valueCell = showOpenInBrowser
+        ? '<a href="' + escapeHtml(href) + '" target="_blank" rel="noopener">' + escapeHtml(href) + '</a>'
+        : '<code class="endpoint-url">' + escapeHtml(href) + '</code>';
+      var downloadBtn = showDownload
+        ? '<button type="button" class="chain-table-action-btn" data-copy-command-open data-copy-command-title="' + escapeHtml(title) + '" data-copy-command-description="Download the file to the current directory with curl." data-copy-command-curl-url="' + escapeHtml(curlUrl) + '" data-copy-command-curl-output="' + escapeHtml(filename) + '" aria-label="Download">Download</button>'
+        : '';
+      var openBtn = showOpenInBrowser
+        ? '<a href="' + escapeHtml(href) + '" target="_blank" rel="noopener" class="chain-table-action-btn">Open</a>'
+        : '';
+      var actions = (downloadBtn + openBtn).trim();
+      rows.push('<tr><td>' + escapeHtml(key) + '</td><td>' + valueCell + '</td><td class="actions-cell">' + actions + '</td></tr>');
     }
 
     tbody.innerHTML = rows.length ? rows.join('') : '<tr><td colspan="3" class="muted">No resources.</td></tr>';
   }
 
+  /** Endpoint types that get an "Open" link (HTTP-style; openable in browser). */
+  var ENDPOINT_OPEN_IN_BROWSER = ['comet-rpc', 'json-rpc-http', 'rest', 'grpc-web'];
+
   function canOpenInBrowser(key) {
-    return key === 'comet-rpc';
+    return ENDPOINT_OPEN_IN_BROWSER.indexOf(key) !== -1;
   }
 
   function renderEndpoints(tbody, data) {
@@ -129,11 +155,11 @@
         var url = item && item.url;
         if (!url) return;
         var urlCell = '<code class="endpoint-url">' + escapeHtml(url) + '</code>';
-        var copyBtn = '<button type="button" class="copy-btn copy-url-btn" data-copy-url="' + escapeHtml(url) + '" aria-label="Copy URL">Copy</button>';
+        var copyBtn = '<button type="button" class="chain-table-action-btn copy-url-btn" data-copy-url="' + escapeHtml(url) + '" aria-label="Copy URL">Copy</button>';
         var openBtn = canOpenInBrowser(key)
-          ? ' <a href="' + escapeHtml(url) + '" target="_blank" rel="noopener" class="copy-btn endpoint-open-btn">Open</a>'
+          ? '<a href="' + escapeHtml(url) + '" target="_blank" rel="noopener" class="chain-table-action-btn">Open</a>'
           : '';
-        html.push('<tr><td><code>' + escapeHtml(key) + '</code></td><td>' + urlCell + '</td><td>' + copyBtn + openBtn + '</td></tr>');
+        html.push('<tr><td><code>' + escapeHtml(key) + '</code></td><td>' + urlCell + '</td><td class="actions-cell">' + copyBtn + openBtn + '</td></tr>');
       });
     });
     tbody.innerHTML = html.length ? html.join('') : '<tr><td colspan="3" class="muted">No endpoints configured.</td></tr>';
@@ -178,8 +204,14 @@
     section.style.display = '';
     var rows = list.map(function (e) {
       var name = e && e.name != null ? e.name : '—';
-      var url = e && e.url ? '<a href="' + escapeHtml(e.url) + '" target="_blank" rel="noopener">' + escapeHtml(e.url) + '</a>' : '—';
-      return '<tr><td>' + escapeHtml(name) + '</td><td>' + url + '</td></tr>';
+      var explorerUrl = e && e.url ? e.url : '';
+      var urlCell = explorerUrl
+        ? '<a href="' + escapeHtml(explorerUrl) + '" target="_blank" rel="noopener">' + escapeHtml(explorerUrl) + '</a>'
+        : '—';
+      var openBtn = explorerUrl
+        ? '<a href="' + escapeHtml(explorerUrl) + '" target="_blank" rel="noopener" class="chain-table-action-btn">Open</a>'
+        : '';
+      return '<tr><td>' + escapeHtml(name) + '</td><td>' + urlCell + '</td><td class="actions-cell">' + openBtn + '</td></tr>';
     });
     tbody.innerHTML = rows.join('');
   }

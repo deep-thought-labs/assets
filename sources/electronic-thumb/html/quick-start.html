@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Electronic Thumb — Quick start</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/demo.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css" crossorigin="anonymous">
+</head>
+<body>
+  <div class="content-page">
+    <p class="back"><a href=".">← Back</a></p>
+    <h1>Electronic Thumb — Quick start</h1>
+    <p class="content-intro">Get the widget on your page in a few steps. Below are the essential steps to configure and embed the widget, a full HTML template you can copy, optional CSS, a preview, and the state the widget exposes. For full customization options and a complete picture of how the widget works, see <a href="architecture">Architecture</a> and <a href="styling">Styling</a>.</p>
+
+    <p class="content-notice" role="note">This page and the widget preview work when served over HTTP (not opened as a file). To try the widget locally, <strong>Node.js is required</strong>. Run the command below <strong>inside the folder where your HTML file is located</strong> (e.g. the folder where you saved the example):</p>
+    <pre class="content-notice-code"><code>npx serve .</code></pre>
+    <p class="content-notice">In production, your host serves the site; no extra step.</p>
+
+    <section class="syntax-section" aria-labelledby="syntax-heading">
+      <h2 id="syntax-heading">Essential steps</h2>
+
+      <div class="syntax-step">
+        <p class="syntax-step-desc"><strong>1. Create or load the config before the widget script.</strong><br>Set <code>window.ElectronicThumb</code> so it exists when the script runs.</p>
+        <pre><code id="syntax-code-1" class="language-html">&lt;script&gt;
+  window.ElectronicThumb = {
+    connectButtonLabel: "Connect",
+    onStateUpdate: function (state) { console.log(state); }
+  };
+&lt;/script&gt;</code></pre>
+        <div class="actions">
+          <button type="button" id="copy-syntax-1">Copy</button>
+        </div>
+      </div>
+
+      <div class="syntax-step">
+        <p class="syntax-step-desc"><strong>2. Put the container div where the widget should appear.</strong><br>Use the <code>electronic-thumb-widget</code> attribute on a single div.</p>
+        <pre><code id="syntax-code-2" class="language-html">&lt;div id="my-electronic-thumb" electronic-thumb-widget&gt;&lt;/div&gt;</code></pre>
+        <div class="actions">
+          <button type="button" id="copy-syntax-2">Copy</button>
+        </div>
+      </div>
+
+      <div class="syntax-step">
+        <p class="syntax-step-desc"><strong>3. Load the widget script after the div.</strong><br>Include the script once the container exists in the DOM.</p>
+        <pre><code id="syntax-code-3" class="language-html">&lt;script src="https://assets.infinitedrive.xyz/widgets/electronic-thumb/electronic-thumb.js"&gt;&lt;/script&gt;</code></pre>
+        <div class="actions">
+          <button type="button" id="copy-syntax-3">Copy</button>
+        </div>
+      </div>
+    </section>
+
+    <p class="code-desc" style="margin-top: 0; margin-bottom: 0.5rem;">Full HTML template. Copy and adjust the script URL to your environment.</p>
+    <details class="code-box">
+      <summary class="code-summary">Code to copy — full HTML</summary>
+      <pre><code id="code-output" class="language-html"></code></pre>
+      <div class="actions">
+        <button type="button" id="copy-code">Copy</button>
+      </div>
+    </details>
+
+    <p class="code-desc" style="margin-top: 1rem; margin-bottom: 0.5rem;">The widget container can be targeted by any ID you assign for custom styles. Optional.</p>
+    <details class="code-box">
+      <summary class="code-summary">Code to copy — CSS (optional)</summary>
+      <p class="code-desc">Target the widget container by ID only if you need custom styles.</p>
+      <pre><code id="css-output" class="language-css">/* Target the widget container by any ID. Defaults are used if you do not add overrides. */
+#my-electronic-thumb {
+  /* your custom styles */
+}</code></pre>
+      <div class="actions">
+        <button type="button" id="copy-css">Copy CSS</button>
+      </div>
+    </details>
+
+    <p class="code-desc" style="margin-top: 1rem; margin-bottom: 0.5rem;">Preview: the widget in a simple layout. Panel opens relative to the trigger by default.</p>
+    <section class="card">
+      <span class="content-label">Preview</span>
+      <div class="demo-menu-bar">
+        <span class="demo-menu-bar-caption">[Project 42] Top menu</span>
+        <div class="demo-widget-slot">
+          <div id="my-electronic-thumb" electronic-thumb-widget></div>
+        </div>
+      </div>
+      <div class="demo-main-container">
+        <span class="demo-main-caption">Don't Panic! This is just an interactive demo.</span>
+      </div>
+    </section>
+
+    <p class="code-desc" style="margin-top: 1rem; margin-bottom: 0.5rem;">State exposed on <code>window.ElectronicThumb</code> (connected, address, network, etc.). Updates on connect, disconnect, or network change.</p>
+    <section class="output-box">
+      <span class="content-label">Output — window.ElectronicThumb</span>
+      <pre><code id="state-output" class="language-json">{}</code></pre>
+      <div class="actions">
+        <button type="button" id="refresh-state">Refresh</button>
+      </div>
+    </section>
+
+    <p class="content-intro" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--g-border);">For more details on customization and a complete understanding of the widget—config options, callbacks, panel anchoring, and all CSS variables—visit <a href="architecture">Architecture</a> and <a href="styling">Styling</a>.</p>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js" crossorigin="anonymous"></script>
+  <script>
+    (function () {
+      window.ElectronicThumb = {
+        connectButtonLabel: 'Connect',
+        connectButtonLoadingLabel: 'Connecting…',
+        connectButtonImage: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round'%3E%3Crect x='2' y='5' width='20' height='14' rx='2'/%3E%3Cpath d='M2 10h20'/%3E%3C/svg%3E",
+        onStateUpdate: function (state) {
+          updateStateOutput(JSON.stringify(state, null, 2));
+        }
+      };
+
+      function updateStateOutput(jsonStr) {
+        var el = document.getElementById('state-output');
+        if (!el) return;
+        el.textContent = jsonStr;
+        delete el.dataset.highlighted;
+        if (window.hljs) hljs.highlightElement(el);
+      }
+
+      var WIDGET_BASE_URL = 'https://assets.infinitedrive.xyz/widgets/electronic-thumb';
+      var scriptSrc = WIDGET_BASE_URL + '/electronic-thumb.js';
+
+      function buildCode() {
+        return [
+          '<!DOCTYPE html>',
+          '<html>',
+          '<head>',
+          '  <title>My page — Electronic Thumb</title>',
+          '</head>',
+          '<body>',
+          '',
+          '  <!-- Widget config. Must run BEFORE loading the widget script. -->',
+          '  <!-- Options: connectButtonLabel, connectButtonLoadingLabel, connectButtonImage, onStateUpdate, onConnect, onDisconnect, onChainChanged, onAccountsChanged. -->',
+          '  <script>',
+          '    window.ElectronicThumb = {',
+          '      connectButtonLabel: "Connect",',
+          '      onStateUpdate: function (state) { console.log("State updated", state); },',
+          '      onConnect: function (state) { console.log("Connected", state.address); },',
+          '      onDisconnect: function () { console.log("Disconnected"); }',
+          '    };',
+          '  <\/script>',
+          '',
+          '  <!-- Widget container: element with attribute electronic-thumb-widget. Optional id lets you target it in CSS. -->',
+          '  <div id="my-electronic-thumb" electronic-thumb-widget></div>',
+          '',
+          '  <main>',
+          '    <!-- Your page content -->',
+          '  </main>',
+          '',
+          '  <!-- Load the widget script after the container (and after config script if used). -->',
+          '  <script src="' + scriptSrc + '"><\/script>',
+          '',
+          '  <!-- Optional: read state (connected, address, chainId, networkName...) or call refresh() after the widget loads. -->',
+          '  <script>',
+          '    (function () {',
+          '      var g = window.ElectronicThumb;',
+          '      if (!g) return;',
+          '      console.log("Connected:", g.connected, "Address:", g.address);',
+          '      g.refresh();',
+          '    })();',
+          '  <\/script>',
+          '',
+          '</body>',
+          '</html>'
+        ].join('\n');
+      }
+
+      function setCodeOutput() {
+        var codeEl = document.getElementById('code-output');
+        codeEl.textContent = buildCode();
+        delete codeEl.dataset.highlighted;
+        if (window.hljs) hljs.highlightElement(codeEl);
+      }
+
+      function highlightCssBlock() {
+        var el = document.getElementById('css-output');
+        if (window.hljs && el) {
+          delete el.dataset.highlighted;
+          hljs.highlightElement(el);
+        }
+      }
+
+      setCodeOutput();
+      updateStateOutput('{}');
+      highlightCssBlock();
+      function highlightSyntaxSteps() {
+        if (!window.hljs) return;
+        [ 'syntax-code-1', 'syntax-code-2', 'syntax-code-3' ].forEach(function (id) {
+          var el = document.getElementById(id);
+          if (el) { delete el.dataset.highlighted; hljs.highlightElement(el); }
+        });
+      }
+      highlightSyntaxSteps();
+
+      function copyToClipboard(id, buttonId) {
+        var codeEl = document.getElementById(id);
+        var text = codeEl.textContent;
+        navigator.clipboard.writeText(text).then(function () {
+          var btn = document.getElementById(buttonId);
+          var orig = btn.textContent;
+          btn.textContent = 'Copied';
+          setTimeout(function () { btn.textContent = orig; }, 1500);
+        });
+      }
+
+      document.getElementById('copy-code').addEventListener('click', function () {
+        copyToClipboard('code-output', 'copy-code');
+      });
+
+      document.getElementById('copy-css').addEventListener('click', function () {
+        copyToClipboard('css-output', 'copy-css');
+      });
+      document.getElementById('copy-syntax-1').addEventListener('click', function () {
+        copyToClipboard('syntax-code-1', 'copy-syntax-1');
+      });
+      document.getElementById('copy-syntax-2').addEventListener('click', function () {
+        copyToClipboard('syntax-code-2', 'copy-syntax-2');
+      });
+      document.getElementById('copy-syntax-3').addEventListener('click', function () {
+        copyToClipboard('syntax-code-3', 'copy-syntax-3');
+      });
+
+      document.getElementById('refresh-state').addEventListener('click', function () {
+        var g = window.ElectronicThumb;
+        if (!g || typeof g.refresh !== 'function') return;
+        g.refresh();
+      });
+
+      function loadScript(src, onError) {
+        var script = document.createElement('script');
+        script.src = src;
+        script.async = true;
+        script.onerror = onError;
+        script.onload = function () {
+          scriptSrc = src;
+          setCodeOutput();
+        };
+        document.body.appendChild(script);
+      }
+
+      loadScript(scriptSrc, function () {
+        loadScript('dist/electronic-thumb.js', function () {
+          loadScript('electronic-thumb.js', function () {
+            updateStateOutput('"Error: script not found. Check the widget URL or serve this folder locally."');
+          });
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

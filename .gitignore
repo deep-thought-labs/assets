@@ -1,0 +1,3 @@
+# Deployed output from npm run deploy (generated from sources/)
+public/widgets/electronic-thumb/*
+!public/widgets/electronic-thumb/.gitkeep

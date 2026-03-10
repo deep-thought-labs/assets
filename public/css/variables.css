@@ -1,0 +1,38 @@
+/**
+ * Theme tokens for the global site (Matrix / terminal).
+ * All other global CSS files use these; change theme here or swap this file.
+ */
+:root {
+  /* Background & surface */
+  --g-bg: #0a0a0a;
+  --g-surface: rgba(0, 0, 0, 0.3);
+  --g-surface-strong: rgba(0, 0, 0, 0.4);
+
+  /* Accent (Matrix green) */
+  --g-accent: #00ff41;
+  --g-accent-hover: #0f0;
+  --g-accent-muted: #00aa55;
+  /* Secondary/caption text: distinct from main text but readable on dark background */
+  --g-accent-dim: #00bb66;
+  --g-accent-text: #00dd88;
+
+  /* Borders */
+  --g-border: #00ff4144;
+  --g-border-strong: #00ff4188;
+  --g-border-subtle: #00ff4166;
+
+  /* Typography */
+  --g-font-mono: "Courier New", Courier, monospace;
+  --g-font-size: 16px;
+  --g-font-size-sm: 0.9rem;
+  --g-font-size-xs: 0.85rem;
+  --g-font-size-code: 0.8rem;
+  --g-line-height: 1.6;
+
+  /* Spacing */
+  --g-space-page: 1.5rem 2rem;
+  --g-space-section: 1.5rem 0;
+  --g-space-block: 1rem;
+  --g-radius: 0;
+  --g-radius-sm: 4px;
+}

@@ -1,0 +1,26 @@
+/**
+ * Code blocks: base pre/code styling.
+ * Content pages that use highlight.js for syntax highlighting should load
+ * a highlight theme (e.g. from CDN) after this file; this provides the
+ * container and fallback when hljs is not used.
+ */
+pre {
+  margin: 0;
+  font-size: var(--g-font-size-code);
+  font-family: var(--g-font-mono);
+  color: var(--g-accent-text);
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-x: auto;
+}
+
+code {
+  font-family: var(--g-font-mono);
+  font-size: 0.9em;
+}
+
+/* When highlight.js is used, it wraps content in .hljs; we only need to
+   ensure our theme variables don't clash. Pages load e.g.:
+   highlight.js theme: https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css
+   Optional: override a few .hljs tokens here to match --g-* if desired.
+ */

@@ -1,9 +1,9 @@
 <!-- Single source for the network detail page. Loaded by mainnet/index.html and testnet/index.html. -->
-<p class="back"><a href="../index.html">← Back to Assets</a></p>
+<p class="back"><a href="../">← Back to Assets</a></p>
 <h1 id="network-heading"></h1>
 <p class="subtitle" id="network-subtitle">Project 42</p>
 <p id="network-intro"></p>
-<p>All values below come from <a href="../references/NETWORK_DATA_JSON_SCHEMA.html"><code>network-data.json</code></a> (schema).</p>
+<p>All values below come from <a href="../references/NETWORK_DATA_JSON_SCHEMA"><code>network-data.json</code></a> (schema).</p>
 
 <section>
   <h2>Network</h2>
@@ -28,7 +28,7 @@
   <h2>Resources</h2>
   <table class="chain-table">
     <thead>
-      <tr><th>Key</th><th>Value</th><th>Action</th></tr>
+      <tr><th>Key</th><th>Value</th><th>Actions</th></tr>
     </thead>
     <tbody id="resources-tbody">
       <tr><td colspan="3" class="muted">Loading…</td></tr>
@@ -36,9 +36,21 @@
   </table>
 </section>
 
+<section id="explorers-section" style="display:none;">
+  <h2>Explorers</h2>
+  <table class="chain-table">
+    <thead>
+      <tr><th>name</th><th>url</th><th>Actions</th></tr>
+    </thead>
+    <tbody id="explorers-tbody">
+      <tr><td colspan="3" class="muted">Loading…</td></tr>
+    </tbody>
+  </table>
+</section>
+
 <section>
-  <h2>Endpoints</h2>
-  <p class="muted">See <a href="../references/NODE_ENDPOINT_SERVICES.html">detailed endpoint information</a>.</p>
+  <h2>RPC Endpoints</h2>
+  <p class="muted">See <a href="../references/NODE_ENDPOINT_SERVICES">detailed endpoint information</a>.</p>
   <table class="chain-table">
     <thead>
       <tr><th>Key</th><th>URL</th><th>Actions</th></tr>
@@ -63,16 +75,6 @@
       <tr><th>name</th></tr>
     </thead>
     <tbody id="features-tbody"></tbody>
-  </table>
-</section>
-
-<section id="explorers-section" style="display:none;">
-  <h2>Explorers</h2>
-  <table class="chain-table">
-    <thead>
-      <tr><th>name</th><th>url</th></tr>
-    </thead>
-    <tbody id="explorers-tbody"></tbody>
   </table>
 </section>
 

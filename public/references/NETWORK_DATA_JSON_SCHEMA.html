@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>network-data.json schema — Project 42</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%2342a5f5'/><text x='16' y='22' text-anchor='middle' fill='white' font-size='18' font-family='sans-serif'>42</text></svg>">
-  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-  <p class="back"><a href="../index.html">← Back to Assets</a></p>
+  <p class="back"><a href="../">← Back to Assets</a></p>
   <h1>network-data.json — schema and source of truth</h1>
   <p class="subtitle">Project 42 · References</p>
 
@@ -67,16 +67,16 @@
     <table class="chain-table">
       <thead><tr><th>Field</th><th>Description</th></tr></thead>
       <tbody>
-        <tr><td><code>genesis.path</code></td><td>Path to genesis on this assets site (e.g. <code>/mainnet/genesis.json</code>).</td></tr>
-        <tr><td><code>genesis.curl_output_filename</code></td><td>Filename for <code>curl -o</code> (e.g. <code>genesis.json</code>).</td></tr>
-        <tr><td><code>network_data.path</code></td><td>Path to this network's <code>network-data.json</code> on the assets site (e.g. <code>/mainnet/network-data.json</code>).</td></tr>
-        <tr><td><code>network_data.curl_output_filename</code></td><td>Filename for <code>curl -o</code> (e.g. <code>network-data.json</code>).</td></tr>
+        <tr><td><code>&lt;key&gt;.src</code></td><td>Local path or absolute URL of the resource.</td></tr>
+        <tr><td><code>&lt;key&gt;.curl_output_filename</code></td><td>Filename for <code>curl -o</code> (e.g. <code>genesis.json</code>).</td></tr>
+        <tr><td><code>&lt;key&gt;.download</code></td><td>Optional boolean. Default <code>false</code>. Only if <code>true</code> is the Download (curl) button shown.</td></tr>
+        <tr><td><code>&lt;key&gt;.open_in_browser</code></td><td>Optional boolean. Default <code>false</code>. Only if <code>true</code> is the value shown as a clickable link and the Open button shown in Actions.</td></tr>
       </tbody>
     </table>
-    <p>Explorers are listed in the root <code>explorers</code> array; there is no <code>explorer_url</code> in resources.</p>
+    <p>Standard keys include <code>genesis</code> and <code>network_data</code>; you can add more with the same structure. <code>path</code> is still accepted for backward compatibility. Explorers are in the root <code>explorers</code> array.</p>
 
     <h2>endpoints (by service key name)</h2>
-    <p>Endpoints are grouped by <strong>service key name</strong> (see <a href="NODE_ENDPOINT_SERVICES.html">NODE_ENDPOINT_SERVICES</a>). Supported keys include public APIs and, optionally, P2P seeds.</p>
+    <p>Endpoints are grouped by <strong>service key name</strong> (see <a href="NODE_ENDPOINT_SERVICES">NODE_ENDPOINT_SERVICES</a>). Supported keys include public APIs and, optionally, P2P seeds.</p>
     <p>Supported keys:</p>
     <table class="chain-table">
       <thead><tr><th>Key name</th><th>Service</th><th>Typical use</th></tr></thead>
@@ -99,9 +99,10 @@
       <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
       <tbody>
         <tr><td><code>url</code></td><td>string</td><td>Endpoint URL.</td></tr>
-        <tr><td><code>primary</code></td><td>boolean</td><td>Optional. Exactly one entry per service should have <code>primary: true</code>; that one is preferred (e.g. for MetaMask or default choice).</td></tr>
+        <tr><td><code>primary</code></td><td>boolean</td><td>Optional. Exactly one entry per service should have <code>primary: true</code>; that one is preferred.</td></tr>
       </tbody>
     </table>
+    <p>Whether the &quot;Open&quot; link is shown is determined programmatically by endpoint type (e.g. <code>comet-rpc</code>, <code>json-rpc-http</code>, <code>rest</code>, <code>grpc-web</code>).</p>
     <p>Example:</p>
     <pre><code>"endpoints": {
   "p2p": [

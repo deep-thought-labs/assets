@@ -49,10 +49,12 @@ Display decimals for EVM/wallets: use the unit with `exponent: 18` (typically 18
 
 | Field | Description |
 |-------|-------------|
-| `genesis.path` | Path to genesis on this assets site (e.g. `/mainnet/genesis.json`). |
-| `genesis.curl_output_filename` | Filename for `curl -o` (e.g. `genesis.json`). |
-| `network_data.path` | Path to this network’s `network-data.json` on the assets site (e.g. `/mainnet/network-data.json`). |
-| `network_data.curl_output_filename` | Filename for `curl -o` (e.g. `network-data.json`). |
+| `<key>.src` | Local path or absolute URL of the resource. |
+| `<key>.curl_output_filename` | Filename for `curl -o` (e.g. `genesis.json`). |
+| `<key>.download` | Optional boolean. Default `false`. Only if `true` is the Download (curl) button shown. |
+| `<key>.open_in_browser` | Optional boolean. Default `false`. Only if `true` is the value a clickable link and the Open button shown in Actions. |
+
+Standard keys: `genesis`, `network_data`. You can add more with the same structure. `path` is still accepted for backward compatibility.
 
 Explorers are listed in the root `explorers` array; there is no `explorer_url` in resources.
 
@@ -80,7 +82,9 @@ Each endpoint object:
 | Field | Type | Description |
 |-------|------|-------------|
 | `url` | string | Endpoint URL. |
-| `primary` | boolean | Optional. Exactly one entry per service should have `primary: true`; that one is preferred (e.g. for MetaMask or default choice). |
+| `primary` | boolean | Optional. Exactly one entry per service should have `primary: true`; that one is preferred. |
+
+Whether the "Open" link is shown is determined programmatically by endpoint type (e.g. `comet-rpc`, `json-rpc-http`, `rest`, `grpc-web`).
 
 Example:
 
