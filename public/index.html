@@ -1,44 +1,57 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Assets — Project 42</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%2342a5f5'/><text x='16' y='22' text-anchor='middle' fill='white' font-size='18' font-family='sans-serif'>42</text></svg>">
-  <link rel="stylesheet" href="/css/style.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Assets — Project 42</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%2342a5f5'/><text x='16' y='22' text-anchor='middle' fill='white' font-size='18' font-family='sans-serif'>42</text></svg>">
+<link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-  <h1>Assets</h1>
-  <p class="subtitle">Project 42 · <a href="https://infinitedrive.xyz/">Infinite Drive</a> Ecosystem</p>
-  <p>An open catalog of static files, data, and tools. Everything here is public and meant to be linked or downloaded.</p>
+<h1>Assets</h1>
+<p class="subtitle">Project 42 · <a href="https://infinitedrive.xyz/">Infinite Drive</a> Ecosystem</p>
 
-  <section class="nav-group">
-    <h2>Networks</h2>
-    <ul class="nav-entries">
-      <li><a class="nav-entry" href="mainnet/">Mainnet</a></li>
-      <li><a class="nav-entry" href="testnet/">Testnet</a></li>
-      <li><a class="nav-entry" href="creative/">Creative</a></li>
-    </ul>
-  </section>
+<figure class="dont-panic-figure" aria-hidden="true">
+  <div class="dont-panic-figure__crop">
+    <img src="/img/dont-panic-green.jpg" alt="Don't Panic — The Hitchhiker's Guide to the Galaxy">
+  </div>
+</figure>
 
-  <section class="nav-group">
-    <h2>Utilities</h2>
-    <ul class="nav-entries">
-      <li><a class="nav-entry" href="widgets/">Widgets</a></li>
-    </ul>
-  </section>
+<p>Consider this your somewhat improbable <strong>catalog</strong> — the static files, chain data, and assorted cosmic detritus you’ll need to point your applications at precisely the right (or at least adequately interesting) corner of the universe. Everything here is public, perfectly linkable, and — in a rare display of universal generosity — there for the taking.</p>
 
-  <section class="nav-group">
-    <h2>References</h2>
-    <ul class="nav-entries">
-      <li><a class="nav-entry" href="references/NETWORK_DATA_JSON_SCHEMA">network-data.json schema</a></li>
-      <li><a class="nav-entry" href="references/NODE_ENDPOINT_SERVICES">Node endpoint services</a></li>
-    </ul>
-  </section>
-  <script>
-    window.addEventListener('pageshow', function (e) {
-      if (e.persisted) window.location.reload();
+<p><strong><a href="https://github.com/deep-thought-labs/assets" target="_blank" rel="noopener">Fully open source.</a></strong> The whole thing is auditable by anyone with a browser and a healthy dose of curiosity. Feel free to use it however you see fit. We believe, rather strongly, that how you connect to the network ought to be something you can read, question, tinker with, and ultimately call your own — no black boxes, no nasty surprises lurking in the void. The code sits here in the open because it’s the only way we’d feel comfortable hitching a lift ourselves.</p>
+
+<section class="nav-group">
+<h2>Public API</h2>
+<p>The various endpoints and APIs required to connect your applications to the Infinite Drive ecosystem are explained in what passes for exhaustive detail on each network page.</p>
+<ul class="nav-entries">
+<li><a class="nav-entry" href="mainnet/">Mainnet</a></li>
+<li><a class="nav-entry" href="testnet/">Testnet</a></li>
+<li><a class="nav-entry" href="creative/">Creative</a></li>
+</ul>
+</section>
+
+<section class="nav-group">
+<h2>Utilities</h2>
+<p class="muted">Embeddable bits and pieces designed to help you flag down a reliable connection — widgets, demos, and other useful oddments — when the universe decides to be particularly difficult.</p>
+<ul class="nav-entries">
+<li><a class="nav-entry" href="widgets/">Widgets</a></li>
+</ul>
+</section>
+
+<section class="nav-group">
+<h2>References</h2>
+<p class="muted">Schemas and service definitions for the incurably curious (or anyone who likes to read the small print before the universe ends).</p>
+<ul class="nav-entries">
+<li><a class="nav-entry" href="references/NETWORK_DATA_JSON_SCHEMA">network-data.json schema</a></li>
+<li><a class="nav-entry" href="references/NODE_ENDPOINT_SERVICES">Node endpoint services</a></li>
+</ul>
+</section>
+
+<script>
+window.addEventListener('pageshow', function (e) {
+if (e.persisted) window.location.reload();
     });
-  </script>
+</script>
 </body>
 </html>

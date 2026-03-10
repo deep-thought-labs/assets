@@ -4,6 +4,8 @@
 
 For an overview and links to resources, see the [Electronic Thumb index](index.html). For the essential steps to embed and configure the widget, use the [Quick start](quick-start.html) page.
 
+[**Open source and yours to inspect.**](https://github.com/deep-thought-labs/assets) This project is fully open source, publicly auditable, and free to use. We believe that how your site reaches out to the hyperspace—and which spacecraft it flags down—ought to be something you control completely, not something hidden behind a black box. The code is there for everyone to read, question, and adapt. No mysteries, no fine print; just a thumb you can trust.
+
 **Serving this site.** This documentation and the widget (when tried from these pages) must be served over HTTP to work correctly. **Node.js is required** to run the local server. Run the command below **inside the folder that contains your HTML file** (e.g. the folder where you saved the example page):
 
 ```
@@ -14,15 +16,15 @@ In production, your site is served by your host; no extra step for end users.
 
 ---
 
-## Stack (external)
+## Stack
 
 | Role | Library |
 |------|--------|
-| Connect, disconnect, switch network, state | **wagmi** |
-| Chains, types, transports | **viem** |
-| Drawer state (open/closed) | **Jotai** (1 atom) |
-| App and queries | **React** + **@tanstack/react-query** |
-| Build | **Vite** |
+| Build and bundling | **Vite** |
+| UI and data layer | **React** + **@tanstack/react-query** |
+| Local UI state | **Jotai** |
+| Wallet and network integration | **wagmi** |
+| Chain and transport utilities | **viem** |
 
 We have implemented and configured this stack and built a simple, friendly UI with a plug-and-play integration: any developer with basic HTML can add the widget to their site and use it without extra tooling.
 
@@ -32,11 +34,11 @@ We have implemented and configured this stack and built a simple, friendly UI wi
 
 Network data is published by this site at three public endpoints:
 
-- **Mainnet:** `/mainnet/network-data.json` (or the site’s mainnet network-data URL)
-- **Testnet:** `/testnet/network-data.json` (or the site’s testnet network-data URL)
-- **Creative:** `/creative/network-data.json` (or the site’s creative network-data URL). Creative is the experimental / playground network (Infinite Improbability Drive Creative; native token CRE42).
+- [**Mainnet:**](/mainnet) Mainnet is the primary production network.
+- [**Testnet:**](/testnet) Testnet mirrors Mainnet in configuration and is intended for testing.
+- [**Creative:**](/creative) Creative is the experimental / playground network. Phoenix strategy where the chain is torn down and recreated on a schedule (e.g. weekly or monthly).
 
-The widget is configured with chain id, name, native currency, RPC URLs, and block explorers from that data. The **environment** (mainnet / testnet / creative / other) is derived from `chainId` in code — there are no custom fields on the chain object.
+The widget is configured with chain id, name, native currency, RPC URLs, and block explorers from that data.
 
 ---
 
@@ -189,4 +191,4 @@ Typical use: a “Refresh” button on your site, or when the page becomes visib
 
 ---
 
-Documentation: [wagmi](https://wagmi.sh), [viem](https://viem.sh).
+Documentation: [Infinite Drive](https://docs.infinitedrive.xyz)
