@@ -2,6 +2,29 @@
  * Global components: nav, back, tables, copy-block, modal, reference-content,
  * and shared content patterns (cards, code-box, output-box) for doc/demo pages.
  */
+
+/* Don't Panic hero image (assets index): crop excess margin so the neon text is the focus */
+.dont-panic-figure {
+  margin: 1rem 0 1.5rem;
+}
+
+.dont-panic-figure__crop {
+  overflow: hidden;
+  max-width: min(90%, 28rem);
+  aspect-ratio: 2 / 1;
+  min-height: 16rem;
+  border-radius: 4px;
+  border: 1px solid var(--g-border);
+}
+
+.dont-panic-figure__crop img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
 .back {
   margin-bottom: 1rem;
 }
