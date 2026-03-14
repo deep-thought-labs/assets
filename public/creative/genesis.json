@@ -1,7 +1,7 @@
 {
   "app_name": "infinited",
   "app_version": "0.1.10",
-  "genesis_time": "2025-12-26T14:38:52.058957Z",
+  "genesis_time": "2026-03-14T00:30:22.74921904Z",
   "chain_id": "infinite_421018002-1",
   "initial_height": 1,
   "app_hash": null,
@@ -10,17 +10,28 @@
     "auth": {
       "params": {
         "max_memo_characters": "256",
-        "tx_sig_limit": "7",
+        "tx_sig_limit": "10",
         "tx_size_cost_per_byte": "10",
         "sig_verify_cost_ed25519": "590",
         "sig_verify_cost_secp256k1": "1000"
       },
       "accounts": [
         {
+          "@type": "/cosmos.auth.v1beta1.ModuleAccount",
+          "base_account": {
+            "address": "infinite17s95c5jpc6x2l3edwh4dm8yhac68yru73d0fyj",
+            "pub_key": null,
+            "account_number": "0",
+            "sequence": "0"
+          },
+          "name": "faucet",
+          "permissions": []
+        },
+        {
           "@type": "/cosmos.auth.v1beta1.BaseAccount",
           "address": "infinite15jhrgqq2lyrlzy0m35vcjpp7hp8efq4punky4s",
           "pub_key": null,
-          "account_number": "0",
+          "account_number": "1",
           "sequence": "0"
         }
       ]
@@ -42,12 +53,21 @@
               "amount": "100000000000000000000"
             }
           ]
+        },
+        {
+          "address": "infinite17s95c5jpc6x2l3edwh4dm8yhac68yru73d0fyj",
+          "coins": [
+            {
+              "denom": "cdrop",
+              "amount": "10000000000000000000000000"
+            }
+          ]
         }
       ],
       "supply": [
         {
           "denom": "cdrop",
-          "amount": "100000000000000000000"
+          "amount": "10000100000000000000000000"
         }
       ],
       "denom_metadata": [
@@ -201,7 +221,7 @@
                 }
               }
             ],
-            "memo": "8c69c5eacc86928ced843d054b63af0289b5d746@192.168.10.119:26656",
+            "memo": "a46f2a62c38d87f63b8e6fd50eea7ee828276c11@172.18.0.2:26656",
             "timeout_height": "0",
             "unordered": false,
             "timeout_timestamp": null,
@@ -232,7 +252,7 @@
             "tip": null
           },
           "signatures": [
-            "OJDBTCHCRPAPhIw63piSs1noV5eG3LI2P5EDbdICO1sXfewUJFtyQ/93i9hCZ8ot0t1RaNvfzqXvYfx8sP+CQQA="
+            "P5ZZGNTK1EHg9WY5BPBe9ZIMepq7763mCMclvJ7B1Tlxryf35YU+vfKOkHN+NLpYnCXa+AMcEESk9Ty1E3Z94wE="
           ]
         }
       ]
