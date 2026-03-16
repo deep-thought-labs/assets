@@ -1,7 +1,7 @@
 {
   "app_name": "infinited",
   "app_version": "0.1.10",
-  "genesis_time": "2026-03-14T00:30:22.74921904Z",
+  "genesis_time": "2026-03-15T04:06:35.892782816Z",
   "chain_id": "infinite_421018002-1",
   "initial_height": 1,
   "app_hash": null,
@@ -221,7 +221,7 @@
                 }
               }
             ],
-            "memo": "a46f2a62c38d87f63b8e6fd50eea7ee828276c11@172.18.0.2:26656",
+            "memo": "e8e7b5f008a59e72ac624cde9607a90178e9cc14@172.18.0.2:26656",
             "timeout_height": "0",
             "unordered": false,
             "timeout_timestamp": null,
@@ -252,7 +252,7 @@
             "tip": null
           },
           "signatures": [
-            "P5ZZGNTK1EHg9WY5BPBe9ZIMepq7763mCMclvJ7B1Tlxryf35YU+vfKOkHN+NLpYnCXa+AMcEESk9Ty1E3Z94wE="
+            "BL0ub6PitpUK6dJccjXs3n1KhI1Fdt9YN8PmmqajcO8Pilxe9OKWMAtxFpfrheAl+ej3WVLe0mlSjo3MlgdZbwA="
           ]
         }
       ]
