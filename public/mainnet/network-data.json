@@ -65,7 +65,7 @@
         "url": "https://comet-rpc-infinite.mschihuahua.org"
       },
       {
-        "url": "https://panda-rpc-comet.xyz"
+        "url": "https://comet-rpc.infinitepanda.xyz"
       }
     ],
     "grpc": [
@@ -77,7 +77,7 @@
         "url": "https://grpc-infinite.mschihuahua.org"
       },
       {
-        "url": "https://panda-rpc-grpc.xyz"
+        "url": "https://grpc.infinitepanda.xyz"
       }
     ],
     "grpc-web": [],
@@ -91,7 +91,7 @@
         "url": "https://evm-rpc-infinite.mschihuahua.org"
       },
       {
-        "url": "https://panda-rpc-evm.xyz"
+        "url": "https://evm-rpc.infinitepanda.xyz"
       }
     ],
     "json-rpc-ws": []
